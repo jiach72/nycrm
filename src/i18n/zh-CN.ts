@@ -61,7 +61,9 @@ const zhCN: MessageSchema = {
                     '就业准证 (EP) 申请与续签',
                     '自雇创业移民 (Self-employed EP)',
                     '股权投资移民',
-                    '永久居民 (PR) 申请规划'
+                    '永久居民 (PR) 申请规划',
+                    'GIP 全球投资者计划',
+                    '家族办公室'
                 ]
             },
             malaysia: {

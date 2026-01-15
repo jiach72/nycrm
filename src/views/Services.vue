@@ -288,7 +288,7 @@ const financialServices = [0, 1, 2, 3]
 const realestateServices = [0, 1]
 
 // Identity Planning
-const singaporeIdentity = [0, 1, 2, 3]
+const singaporeIdentity = [0, 1, 2, 3, 4, 5]
 const malaysiaIdentity = [0]
 
 // Education

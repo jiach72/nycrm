@@ -61,7 +61,9 @@ const en: MessageSchema = {
                     'Employment Pass (EP) Application & Renewal',
                     'Self-employed EP (Entrepreneur)',
                     'Equity Investment Immigration',
-                    'Permanent Resident (PR) Application Planning'
+                    'Permanent Resident (PR) Application Planning',
+                    'GIP Global Investor Programme',
+                    'Family Office'
                 ]
             },
             malaysia: {
