@@ -327,6 +327,13 @@ const goToContact = (): void => {
   box-shadow: var(--shadow-xl);
 }
 
+/* 按压效果 */
+.hero-button:active,
+.hero-button-secondary:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: var(--shadow-md);
+}
+
 .hero-button-secondary {
   background: white;
   color: var(--color-primary);
@@ -360,7 +367,7 @@ const goToContact = (): void => {
   background: white;
   border-radius: var(--radius-lg);
   box-shadow: 0 10px 30px -15px rgba(0, 0, 0, 0.1);
-  transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid rgba(0, 0, 0, 0.03);
   display: flex;
   flex-direction: column;
@@ -570,6 +577,31 @@ const goToContact = (): void => {
   background: var(--color-bg);
   border-color: var(--color-bg);
   transform: translateY(-2px);
+}
+
+.cta-button:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* 触摸设备优化 */
+@media (hover: none) and (pointer: coarse) {
+  .hero-button:hover,
+  .hero-button-secondary:hover,
+  .cta-button:hover,
+  .service-card:hover {
+    transform: none;
+  }
+  
+  .hero-button:active,
+  .hero-button-secondary:active,
+  .cta-button:active {
+    transform: scale(0.98);
+  }
+  
+  .service-card:active {
+    transform: scale(0.99);
+    box-shadow: 0 20px 40px -20px rgba(3, 105, 161, 0.2);
+  }
 }
 
 /* Responsive */

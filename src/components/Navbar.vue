@@ -17,6 +17,7 @@
           :to="item.path"
           class="nav-link"
           active-class="nav-link-active"
+          @click="closeMobileMenu"
         >
           {{ $t(item.label) }}
         </router-link>
@@ -67,6 +68,10 @@ const navItems: NavItem[] = [
 
 const toggleMobileMenu = (): void => {
   mobileMenuOpen.value = !mobileMenuOpen.value
+}
+
+const closeMobileMenu = (): void => {
+  mobileMenuOpen.value = false
 }
 
 const handleContact = (): void => {
@@ -210,8 +215,11 @@ const handleContact = (): void => {
     transform: translateY(-100%);
     opacity: 0;
     visibility: hidden;
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     gap: var(--spacing-sm);
+    /* 触摸滚动优化 */
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
   }
 
   .nav-menu-open {
@@ -228,6 +236,12 @@ const handleContact = (): void => {
 
   .mobile-menu-toggle {
     display: block;
+    /* 触控友好的点击区域 - 44x44px 最小 */
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .cta-button {
