@@ -276,6 +276,165 @@ const zhCN: MessageSchema = {
             button: '预约咨询'
         }
     },
+    about: {
+        pageTitle: '关于我们',
+        pageSubtitle: '企业主在不确定时代里的"第二驾驶舱"',
+        brandStory: {
+            title: '品牌故事',
+            paragraph1: '在全球经济充满不确定性的当下，企业出海不仅仅是物理空间的转移，更是战略视野的升级。<strong>通海南洋 (TongHai Nanyang)</strong> 总部位于新加坡，深耕新马双市场。我们不仅仅是您的出海服务商，更是企业主在风浪中的<strong>"第二驾驶舱"</strong>。',
+            paragraph2: '我们汇聚了金融、法律、教育与税务领域的顶尖专家，致力于为台湾企业家、跨国企业主及高净值家族提供「企业落地 + 身份规划 + 资产架构」的一站式跨境解决方案。我们坚持<strong>合规优先</strong>，以<strong>长期陪跑</strong>为承诺，助您在南洋这片热土上，稳健出海，传承未来。'
+        },
+        coreValues: {
+            title: '核心价值观',
+            compliance: {
+                title: '合规优先',
+                desc: '严格遵循当地法律法规，确保业务架构稳健安全'
+            },
+            goalOriented: {
+                title: '以终为始',
+                desc: '量身定制最适合的落地与传承方案'
+            },
+            transparency: {
+                title: '透明可追溯',
+                desc: '关键节点可追溯，每一次决策都有据可依'
+            },
+            longTerm: {
+                title: '长期陪跑',
+                desc: '长期陪伴企业成长与家族传承'
+            }
+        },
+        coreTeam: {
+            title: '核心团队',
+            intro: '我们的团队由资深金融专家、律师、教育顾问和商业策略师组成，为您提供全方位专业服务。',
+            members: {
+                ada: {
+                    name: 'Ada 黄芊惠',
+                    position: '创始人 | CEO',
+                    bio: 'Finexis Advisory 总监，18年新加坡金融经验，CFP® 认证顾问'
+                },
+                mars: {
+                    name: 'Mars 杨栋',
+                    position: '联合创始人',
+                    bio: '新加坡文化与教育协会会长，28年国际教育经验'
+                },
+                wendy: {
+                    name: 'Wendy 魏文帝',
+                    position: '台湾执行官',
+                    bio: '创投公司 CEO，20年企业顾问经验'
+                }
+            }
+        },
+        cta: {
+            title: '与我们的专家团队见面',
+            subtitle: '预约会议，了解我们如何协助您的业务成长',
+            button: '预约咨询'
+        }
+    },
+    team: {
+        pageTitle: '我们的团队',
+        pageSubtitle: '汇聚金融、法律、教育与税务领域的顶尖专家，为您的出海之路保驾护航',
+        categories: {
+            founders: {
+                title: 'FOUNDERS & EXECUTIVES',
+                subtitle: '创始人与高管层'
+            },
+            advisors: {
+                title: 'INDUSTRY ADVISORS',
+                subtitle: '行业专家顾问（法律、金融、物流）'
+            },
+            consulting: {
+                title: 'CONSULTING & WEALTH',
+                subtitle: '商业咨询与理财团队'
+            },
+            regional: {
+                title: 'REGIONAL HEADS',
+                subtitle: '区域负责人'
+            }
+        },
+        members: {
+            founders: {
+                ada: {
+                    name: 'Ada 黄芊惠',
+                    position: '通海南洋创始人 | CEO',
+                    tags: ['CFP®', 'WMI 家办顾问'],
+                    bio: ['Finexis Advisory 总监, BNI 新加坡宝丰分会主席 (2022-2023)', '留学移民新加坡18年，专注一站式金融解决方案，包括保险、基金、家族信托、VCC 及银行开户等。']
+                },
+                mars: {
+                    name: 'Mars 杨栋',
+                    position: '联合创始人 | 跨境商业落地执行官',
+                    tags: ['北京社科院数学博士'],
+                    bio: ['新加坡文化与教育协会会长 (CEAS), 新加坡文化与教育学院院长', '拥有28年国际教育经验。负责市场考察与落地、身份与教育规划及本地化运营。']
+                },
+                wendy: {
+                    name: 'Wendy 魏文帝',
+                    position: '跨境商业落地执行官（台湾）',
+                    tags: ['创投公司 CEO'],
+                    bio: ['拥有超过20年企业顾问经验, 擅长资源整合与销售。', '具备敏锐的市场分析能力, 为台湾企业家提供专业落地建议。']
+                }
+            },
+            advisors: {
+                thomas: {
+                    name: 'Prof. Dr Thomas Sim',
+                    position: 'FIATA 主席 | 海联集团 CEO',
+                    desc: '新加坡物流学院主席, 世界银行、联合国贸发会议资源专家。获新加坡总统颁发国家奖项。'
+                },
+                gavin: {
+                    name: 'Gavin 柳达礼',
+                    position: '东方投融金控集团创始人',
+                    desc: '30多年金融经验, 擅长投资及操盘科技企业上市。专注于大健康、AI 经济及 RWA 技术。'
+                },
+                linus: {
+                    name: 'Linus 伍修宏',
+                    position: '敦升律师事务所大律师',
+                    desc: '1998年注册律师, 专注资本市场融资、私募基金、合规咨询及金融科技法律服务。'
+                },
+                ronald: {
+                    name: 'Ronald 朱国祯',
+                    position: '朱国祯律师事务所创始人',
+                    desc: '全球家办 (GFO) 协会会员。提供 GIP、PR 申请、家办设立及遗嘱认证服务。'
+                }
+            },
+            consulting: {
+                wendyLiu: {
+                    name: 'Wendy 刘泳岐',
+                    position: 'Finnex Pte Ltd 业务发展总监',
+                    desc: '10年商业顾问经验, 与超过60间银行合作。擅长企业融资与市场进军策略。'
+                },
+                jevon: {
+                    name: 'Jevon 何建洛',
+                    position: 'Finnex Pte Ltd 政府津贴顾问',
+                    desc: '25年经商经验, KAH 执照持有人。专精政府津贴咨询、企业策略转型。'
+                },
+                martin: {
+                    name: 'Martin 许岩',
+                    position: '资深理财规划师 (Finexis)',
+                    desc: '英国伦敦大学学士。深耕新加坡金融业多年, 为高净值客户提供财富管理服务。'
+                }
+            },
+            regional: {
+                chenLi: {
+                    name: '陈利',
+                    position: '四川办事处负责人',
+                    desc: '常驻成都, 协助中国企业家开拓东南亚市场, 提供全链路出海解决方案。'
+                },
+                mayLee: {
+                    name: 'May Lee',
+                    position: '马来西亚负责人',
+                    desc: '农先生集团董事长, BNI 巴生资深顾问。专精资产配置、MM2H 申请及战略规划。'
+                },
+                andy: {
+                    name: 'Andy Chia 谢汉亮',
+                    position: 'Jalin 家宁 业务发展总监',
+                    desc: '20年金融服务经验 (UOB, HSBC)。深厚新马金融网络, 提供跨境金融及房产服务。'
+                }
+            }
+        },
+        cta: {
+            title: '咨询我们的专家团队',
+            subtitle: '点击下方按钮，与我们的顾问安排一次深入的诊断会',
+            button: '预约专家会议'
+        }
+    },
     footer: {
         companyName: '通海南洋',
         tagline: '稳健出海 · 传承未来',
