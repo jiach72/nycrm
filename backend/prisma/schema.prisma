@@ -1,0 +1,253 @@
+// Prisma Schema for TongHai CRM
+// 数据库: PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== 枚举定义 ====================
+
+enum Role {
+  ADMIN
+  MANAGER
+  SALES
+  DELIVERY
+  COMPLIANCE
+  FINANCE
+  CUSTOMER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  IN_PROGRESS
+  LOST
+  CONVERTED
+}
+
+enum KycStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  REVIEW
+}
+
+enum RiskGrade {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ProjectStatus {
+  PLANNING
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  ARCHIVED
+}
+
+enum TaskStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  BLOCKED
+  DONE
+  CANCELLED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AccessLevel {
+  PRIVATE
+  TEAM
+  PUBLIC
+}
+
+// ==================== 数据模型 ====================
+
+// 用户
+model User {
+  id            String     @id @default(uuid())
+  email         String     @unique
+  name          String
+  passwordHash  String     @map("password_hash")
+  role          Role       @default(SALES)
+  department    String?
+  avatarUrl     String?    @map("avatar_url")
+  status        UserStatus @default(ACTIVE)
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+
+  // 关联
+  assignedLeads Lead[]     @relation("AssignedLeads")
+  assignedTasks Task[]     @relation("AssignedTasks")
+  activities    Activity[]
+  documents     Document[] @relation("UploadedBy")
+
+  @@map("users")
+}
+
+// 线索
+model Lead {
+  id              String     @id @default(cuid())
+  contactName     String     @map("contact_name")
+  email           String?
+  phone           String?
+  companyName     String?    @map("company_name")
+  country         String?
+  serviceTypes    String[]   @map("service_types")
+  budgetRange     String?    @map("budget_range")
+  sourceChannel   String     @map("source_channel")
+  inquiryMessage  String?    @map("inquiry_message") @db.Text
+  status          LeadStatus @default(NEW)
+  tags            String[]
+  score           Int        @default(0)
+  assignedTo      User?      @relation("AssignedLeads", fields: [assignedToId], references: [id])
+  assignedToId    String?    @map("assigned_to_id")
+  lastContactedAt DateTime?  @map("last_contacted_at")
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+
+  // 关联
+  customer   Customer?
+  tasks      Task[]
+  activities Activity[]
+
+  @@index([assignedToId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("leads")
+}
+
+// 客户
+model Customer {
+  id            String    @id @default(cuid())
+  lead          Lead      @relation(fields: [leadId], references: [id])
+  leadId        String    @unique @map("lead_id")
+  familyMembers Json?     @map("family_members")
+  companyInfo   Json?     @map("company_info")
+  kycStatus     KycStatus @default(PENDING) @map("kyc_status")
+  riskGrade     RiskGrade @default(LOW) @map("risk_grade")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // 关联
+  projects Project[]
+
+  @@map("customers")
+}
+
+// 项目
+model Project {
+  id                   String        @id @default(cuid())
+  customer             Customer      @relation(fields: [customerId], references: [id])
+  customerId           String        @map("customer_id")
+  title                String        @default("Untitled Project")
+  description          String?       @db.Text
+  projectType          String        @map("project_type")
+  status               ProjectStatus @default(PLANNING)
+  completionPercentage Int           @default(0) @map("completion_percentage")
+  startDate            DateTime?     @map("start_date")
+  estimatedEndDate     DateTime?     @map("estimated_end_date")
+  actualEndDate        DateTime?     @map("actual_end_date")
+  budget               Decimal?      @db.Decimal(15, 2)
+  currency             String        @default("SGD")
+  createdAt            DateTime      @default(now()) @map("created_at")
+  updatedAt            DateTime      @updatedAt @map("updated_at")
+
+  // 关联
+  tasks     Task[]
+  documents Document[]
+
+  @@index([customerId])
+  @@index([status])
+  @@map("projects")
+}
+
+// 任务
+model Task {
+  id             String       @id @default(cuid())
+  title          String
+  description    String?      @db.Text
+  project        Project?     @relation(fields: [projectId], references: [id])
+  projectId      String?      @map("project_id")
+  lead           Lead?        @relation(fields: [leadId], references: [id])
+  leadId         String?      @map("lead_id")
+  assignedTo     User?        @relation("AssignedTasks", fields: [assignedToId], references: [id])
+  assignedToId   String?      @map("assigned_to_id")
+  status         TaskStatus   @default(NOT_STARTED)
+  priority       TaskPriority @default(MEDIUM)
+  dueDate        DateTime?    @map("due_date")
+  slaHours       Int?         @map("sla_hours")
+  completedAt    DateTime?    @map("completed_at")
+  blockingReason String?      @map("blocking_reason")
+  tags           String[]
+  timeSpentHours Int?         @map("time_spent_hours")
+  notes          String?      @db.Text
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  @@index([assignedToId])
+  @@index([status])
+  @@index([dueDate])
+  @@map("tasks")
+}
+
+// 文档
+model Document {
+  id           String      @id @default(cuid())
+  fileName     String      @map("file_name")
+  filePath     String      @map("file_path")
+  fileSize     Int         @map("file_size")
+  fileType     String      @map("file_type")
+  project      Project?    @relation(fields: [projectId], references: [id])
+  projectId    String?     @map("project_id")
+  documentType String?     @map("document_type")
+  uploadedBy   User        @relation("UploadedBy", fields: [uploadedById], references: [id])
+  uploadedById String      @map("uploaded_by_id")
+  accessLevel  AccessLevel @default(PRIVATE) @map("access_level")
+  version      Int         @default(1)
+  expiresAt    DateTime?   @map("expires_at")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  @@index([projectId])
+  @@index([documentType])
+  @@map("documents")
+}
+
+// 活动记录
+model Activity {
+  id          String   @id @default(uuid())
+  actor       User     @relation(fields: [actorId], references: [id])
+  actorId     String   @map("actor_id")
+  actionType  String   @map("action_type")
+  entityType  String   @map("entity_type")
+  entityId    String   @map("entity_id")
+  changes     Json?
+  description String?  @db.Text
+  lead        Lead?    @relation(fields: [leadId], references: [id])
+  leadId      String?  @map("lead_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("activities")
+}

@@ -3,25 +3,24 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "workspaces": [
+    "packages/*",
+    "backend"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "vue-tsc && vite build",
-    "preview": "vite preview",
-    "type-check": "vue-tsc --noEmit"
-  },
-  "dependencies": {
-    "@element-plus/icons-vue": "^2.3.1",
-    "element-plus": "^2.5.6",
-    "pinia": "^2.1.7",
-    "vue": "^3.4.15",
-    "vue-i18n": "^11.2.8",
-    "vue-router": "^4.2.5"
+    "dev:website": "npm run dev -w @tonghai/website",
+    "dev:management": "npm run dev -w @tonghai/management",
+    "dev:portal": "npm run dev -w @tonghai/customer-portal",
+    "dev:backend": "npm run dev -w @tonghai/backend",
+    "build:website": "npm run build -w @tonghai/website",
+    "build:management": "npm run build -w @tonghai/management",
+    "build:portal": "npm run build -w @tonghai/customer-portal",
+    "build:all": "npm run build:website && npm run build:management && npm run build:portal",
+    "docker:up": "docker-compose -f docker/docker-compose.yml up -d",
+    "docker:down": "docker-compose -f docker/docker-compose.yml down"
   },
   "devDependencies": {
     "@types/node": "^20.11.5",
-    "@vitejs/plugin-vue": "^5.0.3",
-    "typescript": "^5.3.3",
-    "vite": "^5.0.11",
-    "vue-tsc": "^3.2.2"
+    "typescript": "^5.3.3"
   }
 }

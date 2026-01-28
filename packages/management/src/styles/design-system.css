@@ -1,0 +1,65 @@
+:root {
+  /* Core Colors - Professional Rich Theme (Cyan/Teal) */
+  --color-primary: #0891B2;
+  /* Cyan 600 - Professional & Trustworthy */
+  --color-secondary: #0E7490;
+  /* Cyan 700 */
+  --color-cta: #059669;
+  /* Emerald 600 - Positive Action */
+  --color-accent: #8B5CF6;
+  /* Violet 500 - Rich nuances */
+
+  --color-background: #FFFFFF;
+  /* Pure White */
+  --color-surface: #F8FAFC;
+  /* Slate 50 - Subtle separation */
+  --color-surface-hover: #F1F5F9;
+  /* Slate 100 */
+
+  --color-text: #0F172A;
+  /* Slate 900 - Sharp, readable */
+  --color-text-muted: #64748B;
+  /* Slate 500 */
+  --color-border: #E2E8F0;
+  /* Slate 200 */
+
+  /* Spacing */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+
+  /* Shadows - Layered & Professional */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+
+  /* Border Radius - Modern Standard */
+  --radius-sm: 0.375rem;
+  /* 6px */
+  --radius-md: 0.5rem;
+  /* 8px */
+  --radius-lg: 0.75rem;
+  /* 12px */
+}
+
+/* Typography Overrides */
+h1,
+h2,
+h3,
+.page-title,
+.logo-text {
+  font-family: 'Lexend', sans-serif !important;
+}
+
+body {
+  font-family: 'Source Sans 3', sans-serif !important;
+}
+
+/* Glassmorphism - Subtle Professional */
+.glass {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+}

@@ -1,0 +1,175 @@
+<template>
+  <div class="document-list">
+    <div class="page-header">
+      <div class="header-content">
+        <h1>文档中心</h1>
+        <p>安全管理您的所有项目文档</p>
+      </div>
+      <el-button type="primary" @click="showUploadDialog = true">
+        <el-icon><Upload /></el-icon> 上传文档
+      </el-button>
+    </div>
+
+    <!-- 文档分类 -->
+    <el-tabs v-model="activeTab">
+      <el-tab-pane label="全部文档" name="all" />
+      <el-tab-pane label="我上传的" name="uploaded" />
+      <el-tab-pane label="待签署" name="pending" />
+      <el-tab-pane label="已完成" name="completed" />
+    </el-tabs>
+
+    <!-- 文档列表 -->
+    <el-table :data="documents" style="width: 100%">
+      <el-table-column label="文档名称" min-width="250">
+        <template #default="{ row }">
+          <div class="doc-name">
+            <el-icon size="20" :color="getFileIconColor(row.type)">
+              <Document />
+            </el-icon>
+            <span>{{ row.name }}</span>
+          </div>
+        </template>
+      </el-table-column>
+      <el-table-column prop="project" label="关联项目" width="200" />
+      <el-table-column prop="size" label="大小" width="100" />
+      <el-table-column label="状态" width="120">
+        <template #default="{ row }">
+          <el-tag :type="getDocStatusType(row.status)" size="small">
+            {{ getDocStatusLabel(row.status) }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column prop="uploadedAt" label="上传时间" width="150">
+        <template #default="{ row }">
+          {{ formatDate(row.uploadedAt) }}
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" width="150" fixed="right">
+        <template #default="{ row }">
+          <el-button type="primary" link @click="handleDownload(row)">下载</el-button>
+          <el-button type="danger" link @click="handleDelete(row)">删除</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+
+    <!-- 上传对话框 -->
+    <el-dialog v-model="showUploadDialog" title="上传文档" width="500px">
+      <el-upload
+        drag
+        action="/api/v1/documents/upload"
+        :on-success="handleUploadSuccess"
+        :on-error="handleUploadError"
+      >
+        <el-icon size="48"><UploadFilled /></el-icon>
+        <div>将文件拖到此处，或<em>点击上传</em></div>
+        <template #tip>
+          <div class="upload-tip">支持 PDF、Word、Excel、图片等格式，单个文件不超过 20MB</div>
+        </template>
+      </el-upload>
+    </el-dialog>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref } from 'vue'
+import { ElMessage } from 'element-plus'
+import { Upload, Document, UploadFilled } from '@element-plus/icons-vue'
+
+const activeTab = ref('all')
+const showUploadDialog = ref(false)
+
+// 模拟数据
+const documents = ref([
+  { id: '1', name: '服务合同.pdf', type: 'pdf', project: '新加坡公司注册', size: '2.5 MB', status: 'signed', uploadedAt: '2026-01-10' },
+  { id: '2', name: '护照扫描件.jpg', type: 'image', project: 'EP 签证申请', size: '1.2 MB', status: 'uploaded', uploadedAt: '2026-01-22' },
+  { id: '3', name: '公司章程.docx', type: 'word', project: '新加坡公司注册', size: '856 KB', status: 'pending', uploadedAt: '2026-01-15' },
+  { id: '4', name: '财务报表.xlsx', type: 'excel', project: '税务规划咨询', size: '1.8 MB', status: 'uploaded', uploadedAt: '2026-01-25' },
+])
+
+function getFileIconColor(type: string): string {
+  const map: Record<string, string> = {
+    pdf: '#dc2626',
+    word: '#2563eb',
+    excel: '#16a34a',
+    image: '#9333ea',
+  }
+  return map[type] || '#666'
+}
+
+function getDocStatusLabel(status: string): string {
+  const map: Record<string, string> = {
+    uploaded: '已上传',
+    pending: '待签署',
+    signed: '已签署',
+    rejected: '已退回',
+  }
+  return map[status] || status
+}
+
+function getDocStatusType(status: string): 'success' | 'warning' | 'danger' | 'info' {
+  const map: Record<string, 'success' | 'warning' | 'danger' | 'info'> = {
+    uploaded: 'info',
+    pending: 'warning',
+    signed: 'success',
+    rejected: 'danger',
+  }
+  return map[status] || 'info'
+}
+
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('zh-CN')
+}
+
+function handleDownload(doc: any) {
+  ElMessage.success(`开始下载: ${doc.name}`)
+}
+
+function handleDelete(doc: any) {
+  ElMessage.info(`删除功能开发中: ${doc.name}`)
+}
+
+function handleUploadSuccess() {
+  ElMessage.success('上传成功')
+  showUploadDialog.value = false
+}
+
+function handleUploadError() {
+  ElMessage.error('上传失败，请重试')
+}
+</script>
+
+<style scoped>
+.document-list {
+  max-width: 1200px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.header-content h1 {
+  font-size: 28px;
+  color: #1a365d;
+  margin: 0 0 8px;
+}
+
+.header-content p {
+  color: #666;
+  margin: 0;
+}
+
+.doc-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.upload-tip {
+  font-size: 12px;
+  color: #999;
+  margin-top: 8px;
+}
+</style>
