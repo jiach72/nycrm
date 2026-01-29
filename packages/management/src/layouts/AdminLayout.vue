@@ -3,7 +3,7 @@
     <!-- 侧边栏 -->
     <aside class="sidebar" :class="{ collapsed: isCollapsed }">
       <div class="logo">
-        <span v-if="!isCollapsed">通海CRM</span>
+        <span v-if="!isCollapsed">通海南洋CRM</span>
         <span v-else>TH</span>
       </div>
       
@@ -26,15 +26,44 @@
           <template #title>线索管理</template>
         </el-menu-item>
         
+        <el-menu-item index="/projects">
+          <el-icon><Briefcase /></el-icon>
+          <template #title>项目管理</template>
+        </el-menu-item>
+        
         <el-menu-item index="/tasks">
           <el-icon><List /></el-icon>
           <template #title>任务看板</template>
         </el-menu-item>
         
-        <el-menu-item index="/settings">
-          <el-icon><Setting /></el-icon>
-          <template #title>系统设置</template>
+        <el-menu-item index="/messages">
+          <el-icon><ChatDotRound /></el-icon>
+          <template #title>消息发送</template>
         </el-menu-item>
+
+        <el-menu-item index="/reports">
+          <el-icon><DataAnalysis /></el-icon>
+          <template #title>报表中心</template>
+        </el-menu-item>
+        
+        <el-sub-menu index="/settings">
+          <template #title>
+            <el-icon><Setting /></el-icon>
+            <span>系统设置</span>
+          </template>
+          <el-menu-item index="/settings">
+            <el-icon><Tools /></el-icon>
+            <span>基本设置</span>
+          </el-menu-item>
+          <el-menu-item index="/settings/users">
+            <el-icon><UserFilled /></el-icon>
+            <span>用户管理</span>
+          </el-menu-item>
+          <el-menu-item index="/settings/roles">
+            <el-icon><Key /></el-icon>
+            <span>角色权限</span>
+          </el-menu-item>
+        </el-sub-menu>
       </el-menu>
     </aside>
 
@@ -90,10 +119,16 @@ import {
   Odometer,
   User,
   List,
+  Briefcase,
   Setting,
   Fold,
   Expand,
   ArrowDown,
+  ChatDotRound,
+  DataAnalysis,
+  Tools,
+  UserFilled,
+  Key,
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -164,24 +199,79 @@ function handleCommand(command: string) {
 }
 
 :deep(.el-menu-item) {
-  height: 50px;
-  line-height: 50px;
+  height: 48px;
+  line-height: 48px;
   margin: 4px 12px;
   border-radius: var(--radius-sm);
   color: var(--color-text-muted) !important;
   font-family: 'Source Sans 3', sans-serif;
   font-weight: 500;
+  transition: all 0.2s ease;
 }
 
 :deep(.el-menu-item.is-active) {
-  background: rgba(8, 145, 178, 0.1) !important; /* Cyan 600 at 10% */
+  background: linear-gradient(135deg, rgba(8, 145, 178, 0.15) 0%, rgba(6, 182, 212, 0.08) 100%) !important;
   color: var(--color-primary) !important;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 :deep(.el-menu-item:hover) {
-  background: var(--color-surface-hover) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
   color: var(--color-text) !important;
+}
+
+/* 子菜单样式优化 */
+:deep(.el-sub-menu) {
+  margin: 4px 12px;
+}
+
+:deep(.el-sub-menu__title) {
+  height: 48px !important;
+  line-height: 48px !important;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted) !important;
+  font-family: 'Source Sans 3', sans-serif;
+  font-weight: 500;
+  transition: all 0.15s ease;
+  padding-left: 20px !important;
+  padding-right: 12px !important;
+}
+
+:deep(.el-sub-menu__title span) {
+  flex: 1;
+}
+
+:deep(.el-sub-menu__title:hover) {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: var(--color-text) !important;
+}
+
+:deep(.el-sub-menu.is-active > .el-sub-menu__title) {
+  color: var(--color-primary) !important;
+}
+
+:deep(.el-sub-menu .el-menu) {
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+:deep(.el-sub-menu .el-menu-item) {
+  height: 40px;
+  line-height: 40px;
+  margin: 0 0 0 8px;
+  padding-left: 40px !important;
+  font-size: 13px;
+}
+
+:deep(.el-sub-menu .el-menu-item .el-icon) {
+  font-size: 14px;
+  margin-right: 8px;
+}
+
+/* 子菜单展开箭头 */
+:deep(.el-sub-menu__icon-arrow) {
+  color: var(--color-text-muted);
+  transition: transform 0.15s ease;
 }
 
 .main-container {

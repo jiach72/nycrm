@@ -28,6 +28,19 @@ export interface Lead {
     lastContactedAt?: string
     createdAt: string
     updatedAt: string
+    // 关联数据（仅在详情接口返回）
+    activities?: Array<{
+        id: string
+        actionType: string
+        description: string
+        createdAt: string
+        actor?: UserRef
+    }>
+    tasks?: Array<{
+        id: string
+        title: string
+        status: string
+    }>
 }
 
 // 创建线索请求

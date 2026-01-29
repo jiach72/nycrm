@@ -1,21 +1,21 @@
 <template>
-  <div class="project-list">
+  <div class="project-list" v-loading="isLoading">
     <div class="page-header">
       <h1>我的项目</h1>
       <p>查看和追踪您所有服务项目的进度</p>
     </div>
 
     <el-row :gutter="24">
-      <el-col :span="8" v-for="project in projects" :key="project.id">
+      <el-col :span="8" v-for="project in (projects || [])" :key="project.id" :xs="24" :sm="12" :md="8">
         <el-card class="project-card" shadow="hover" @click="$router.push(`/projects/${project.id}`)">
           <div class="project-type">
-            <el-icon size="32" :color="getTypeColor(project.type)">
-              <component :is="getTypeIcon(project.type)" />
+            <el-icon size="32" :color="getTypeColor(project.projectType)">
+              <component :is="getTypeIcon(project.projectType)" />
             </el-icon>
           </div>
           <div class="project-info">
-            <h3>{{ project.name }}</h3>
-            <p class="project-desc">{{ project.description }}</p>
+            <h3>{{ project.title || '无标题项目' }}</h3>
+            <p class="project-desc">{{ project.description || '暂无详细描述' }}</p>
           </div>
           <div class="project-status">
             <el-tag :type="getStatusType(project.status)" size="small">
@@ -28,70 +28,45 @@
           <div class="project-progress">
             <div class="progress-label">
               <span>完成进度</span>
-              <span>{{ project.progress }}%</span>
+              <span>{{ project.completionPercentage || 0 }}%</span>
             </div>
             <el-progress 
-              :percentage="project.progress" 
+              :percentage="project.completionPercentage || 0" 
               :stroke-width="8"
               :show-text="false"
-              :color="getProgressColor(project.progress)"
+              :color="getProgressColor(project.completionPercentage || 0)"
             />
           </div>
           <div class="project-consultant">
-            <el-avatar :size="28">{{ project.consultant?.name?.[0] }}</el-avatar>
-            <span>负责顾问: {{ project.consultant?.name }}</span>
+            <el-avatar :size="20">{{ project.consultant?.name?.[0] || '管' }}</el-avatar>
+            <span>项目负责人: {{ project.consultant?.name || '指派中' }}</span>
           </div>
         </el-card>
       </el-col>
     </el-row>
 
-    <el-empty v-if="projects.length === 0" description="暂无项目" />
+    <el-empty v-if="!isLoading && (!projects || projects.length === 0)" description="暂无项目" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { Building, Passport, Tickets, Document } from '@element-plus/icons-vue'
+import { onMounted } from 'vue'
+import { storeToRefs } from 'pinia'
+import { OfficeBuilding, Stamp, Tickets, Document } from '@element-plus/icons-vue'
+import { useProjectStore } from '@/stores/projectStore'
 
-// 模拟数据
-const projects = ref([
-  {
-    id: '1',
-    name: '新加坡公司注册',
-    type: 'company',
-    description: 'ABC Technology Pte. Ltd.',
-    status: 'IN_PROGRESS',
-    progress: 65,
-    startDate: '2026-01-10',
-    consultant: { name: '李四' },
-  },
-  {
-    id: '2',
-    name: 'EP 签证申请',
-    type: 'visa',
-    description: '就业准证申请',
-    status: 'PENDING_DOCS',
-    progress: 30,
-    startDate: '2026-01-20',
-    consultant: { name: '王五' },
-  },
-  {
-    id: '3',
-    name: '税务规划咨询',
-    type: 'tax',
-    description: '企业税收优化方案',
-    status: 'NOT_STARTED',
-    progress: 0,
-    startDate: '2026-02-01',
-    consultant: { name: '赵六' },
-  },
-])
+const projectStore = useProjectStore()
+const { projects, isLoading } = storeToRefs(projectStore)
+
+onMounted(() => {
+  projectStore.fetchMyProjects()
+})
 
 function getTypeIcon(type: string) {
   const map: Record<string, any> = {
-    company: Building,
-    visa: Passport,
-    tax: Tickets,
+    'Enterprise Setup': OfficeBuilding,
+    'EP Application': Stamp,
+    'Tax Planning': Tickets,
     default: Document,
   }
   return map[type] || map.default
@@ -99,31 +74,31 @@ function getTypeIcon(type: string) {
 
 function getTypeColor(type: string): string {
   const map: Record<string, string> = {
-    company: '#1a365d',
-    visa: '#059669',
-    tax: '#d97706',
+    'Enterprise Setup': '#1a365d',
+    'EP Application': '#059669',
+    'Tax Planning': '#d97706',
   }
   return map[type] || '#666'
 }
 
 function getStatusLabel(status: string): string {
   const map: Record<string, string> = {
-    NOT_STARTED: '未开始',
-    IN_PROGRESS: '进行中',
-    PENDING_DOCS: '等待文件',
-    UNDER_REVIEW: '审核中',
+    PLANNING: '规划中',
+    ACTIVE: '进行中',
+    ON_HOLD: '暂停',
     COMPLETED: '已完成',
+    ARCHIVED: '归档'
   }
   return map[status] || status
 }
 
 function getStatusType(status: string): 'success' | 'warning' | 'danger' | 'info' {
   const map: Record<string, 'success' | 'warning' | 'danger' | 'info'> = {
-    NOT_STARTED: 'info',
-    IN_PROGRESS: 'warning',
-    PENDING_DOCS: 'danger',
-    UNDER_REVIEW: 'warning',
+    PLANNING: 'info',
+    ACTIVE: 'success',
+    ON_HOLD: 'warning',
     COMPLETED: 'success',
+    ARCHIVED: 'info'
   }
   return map[status] || 'info'
 }
@@ -135,7 +110,8 @@ function getProgressColor(progress: number): string {
   return '#d9d9d9'
 }
 
-function formatDate(dateStr: string): string {
+function formatDate(dateStr: string | null): string {
+  if (!dateStr) return '-'
   return new Date(dateStr).toLocaleDateString('zh-CN')
 }
 </script>

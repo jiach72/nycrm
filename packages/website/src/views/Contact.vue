@@ -111,7 +111,7 @@
                   <el-icon class="info-icon"><Message /></el-icon>
                   <div>
                     <h4>{{ t('contact.info.email.title') }}</h4>
-                    <p><a href="mailto:admin@tonghainanyang.com">admin@tonghainanyang.com</a></p>
+                    <p><a href="mailto:admin@thny.sg">admin@thny.sg</a></p>
                   </div>
                 </div>
 

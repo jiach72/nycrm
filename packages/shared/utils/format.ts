@@ -97,7 +97,6 @@ export function getStatusLabel(status: string): string {
         CONVERTED: '已转化',
         // Task Status
         NOT_STARTED: '待开始',
-        IN_PROGRESS: '进行中',
         BLOCKED: '已阻塞',
         DONE: '已完成',
         CANCELLED: '已取消',

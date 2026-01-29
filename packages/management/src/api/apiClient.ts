@@ -29,6 +29,11 @@ apiClient.interceptors.response.use(
         const authStore = useAuthStore()
 
         if (error.response?.status === 401) {
+            // 如果是登录接口本身的 401 错误，直接返回异常供页面处理，不进行跳转
+            if (error.config?.url?.includes('/auth/login')) {
+                return Promise.reject(error.response?.data || error)
+            }
+
             // Token 过期，尝试刷新
             if (authStore.refreshToken) {
                 try {

@@ -167,8 +167,49 @@ function handleAssign() {
   ElMessage.info('分配功能开发中')
 }
 
-function handleConvert() {
-  ElMessage.info('转化功能开发中')
+async function handleConvert() {
+  if (!lead.value) return
+  
+  if (!lead.value.email) {
+    ElMessage.error('该线索缺少邮箱，无法转化为客户')
+    return
+  }
+
+  if (lead.value.status === 'CONVERTED') {
+    ElMessage.warning('该线索已转化为客户')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      `确定要将线索 "${lead.value.contactName}" 转化为客户吗？\n系统将自动创建客户账号并生成首次登录链接。`,
+      '转化为客户',
+      { type: 'info', confirmButtonText: '确认转化', cancelButtonText: '取消' }
+    )
+
+    const result = await leadStore.convertToCustomer(lead.value.id)
+    
+    // 显示成功信息和设置密码链接
+    await ElMessageBox.alert(
+      `客户账号已创建成功！\n\n请将以下链接发送给客户用于首次登录设置密码：\n\n${window.location.origin}/portal${result.setupUrl}`,
+      '转化成功',
+      { 
+        type: 'success',
+        confirmButtonText: '复制链接',
+        callback: () => {
+          navigator.clipboard.writeText(`${window.location.origin}/portal${result.setupUrl}`)
+          ElMessage.success('链接已复制到剪贴板')
+        }
+      }
+    )
+
+    // 刷新当前线索状态
+    await leadStore.fetchLeadById(lead.value.id)
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      ElMessage.error(error.response?.data?.message || '转化失败')
+    }
+  }
 }
 
 async function handleDelete() {

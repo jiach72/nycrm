@@ -1,7 +1,8 @@
-import { Router } from 'express'
+import { Router, Request, Response, NextFunction } from 'express'
 import { body, param, query } from 'express-validator'
 import { leadService } from '../services'
 import { validate, authMiddleware, optionalAuth } from '../middlewares'
+import { LeadStatus } from '@prisma/client'
 
 const router = Router()
 
@@ -21,10 +22,10 @@ router.get(
         query('search').optional().isString(),
     ],
     validate,
-    async (req, res, next) => {
+    async (req: Request, res: Response, next: NextFunction) => {
         try {
             const filters = {
-                status: req.query.status as string | undefined,
+                status: req.query.status as LeadStatus | undefined,
                 assignedToId: req.query.assignedToId as string | undefined,
                 sourceChannel: req.query.sourceChannel as string | undefined,
                 country: req.query.country as string | undefined,
@@ -48,7 +49,7 @@ router.get(
 /**
  * GET /leads/stats - 获取线索统计
  */
-router.get('/stats', authMiddleware, async (req, res, next) => {
+router.get('/stats', authMiddleware, async (req: Request, res: Response, next: NextFunction) => {
     try {
         const stats = await leadService.getLeadStats()
         res.json(stats)
@@ -60,7 +61,7 @@ router.get('/stats', authMiddleware, async (req, res, next) => {
 /**
  * GET /leads/activities - 获取最近活动
  */
-router.get('/activities', authMiddleware, async (req, res, next) => {
+router.get('/activities', authMiddleware, async (req: Request, res: Response, next: NextFunction) => {
     try {
         const limit = req.query.limit ? Number(req.query.limit) : 20
         const activities = await leadService.getRecentActivities(limit)
@@ -78,7 +79,7 @@ router.get(
     authMiddleware,
     [param('id').notEmpty()],
     validate,
-    async (req, res, next) => {
+    async (req: Request, res: Response, next: NextFunction) => {
         try {
             const lead = await leadService.getLeadById(req.params.id)
             res.json(lead)
@@ -101,7 +102,7 @@ router.post(
         body('sourceChannel').notEmpty().withMessage('来源渠道不能为空'),
     ],
     validate,
-    async (req, res, next) => {
+    async (req: Request, res: Response, next: NextFunction) => {
         try {
             const lead = await leadService.createLead(req.body, req.user!.id)
             res.status(201).json(lead)
@@ -123,7 +124,7 @@ router.post(
         body('phone').optional().isString(),
     ],
     validate,
-    async (req, res, next) => {
+    async (req: Request, res: Response, next: NextFunction) => {
         try {
             // 将官网表单数据转换为线索格式
             const leadData = {
@@ -162,7 +163,7 @@ router.put(
     authMiddleware,
     [param('id').notEmpty()],
     validate,
-    async (req, res, next) => {
+    async (req: Request, res: Response, next: NextFunction) => {
         try {
             const lead = await leadService.updateLead(
                 req.params.id,
@@ -187,7 +188,7 @@ router.post(
         body('assignedToId').notEmpty().withMessage('分配对象不能为空'),
     ],
     validate,
-    async (req, res, next) => {
+    async (req: Request, res: Response, next: NextFunction) => {
         try {
             const lead = await leadService.assignLead(
                 req.params.id,
@@ -210,9 +211,27 @@ router.delete(
     authMiddleware,
     [param('id').notEmpty()],
     validate,
-    async (req, res, next) => {
+    async (req: Request, res: Response, next: NextFunction) => {
         try {
             const result = await leadService.deleteLead(req.params.id)
+            res.json(result)
+        } catch (error) {
+            next(error)
+        }
+    }
+)
+
+/**
+ * POST /leads/:id/convert - 将线索转化为客户
+ */
+router.post(
+    '/:id/convert',
+    authMiddleware,
+    [param('id').notEmpty()],
+    validate,
+    async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const result = await leadService.convertToCustomer(req.params.id, req.user!.id)
             res.json(result)
         } catch (error) {
             next(error)

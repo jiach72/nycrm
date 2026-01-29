@@ -53,6 +53,58 @@ export const projectService = {
         }
     },
 
+    async getMyProjects(customerEmail: string) {
+        return prisma.project.findMany({
+            where: {
+                customer: {
+                    lead: {
+                        email: customerEmail
+                    }
+                }
+            },
+            include: {
+                tasks: {
+                    select: { id: true, status: true }
+                },
+                _count: {
+                    select: { tasks: true, documents: true }
+                }
+            },
+            orderBy: { updatedAt: 'desc' }
+        })
+    },
+
+    // 客户获取自己的项目详情
+    async getMyProjectById(id: string, customerEmail: string) {
+        return prisma.project.findFirst({
+            where: {
+                id,
+                customer: {
+                    lead: {
+                        email: customerEmail
+                    }
+                }
+            },
+            include: {
+                tasks: {
+                    include: {
+                        assignedTo: { select: { id: true, name: true, avatarUrl: true } }
+                    },
+                    orderBy: { dueDate: 'asc' }
+                },
+                documents: {
+                    where: {
+                        accessLevel: { in: ['PUBLIC', 'TEAM'] } // 门户能查看的文档级别（暂定）
+                    },
+                    orderBy: { createdAt: 'desc' },
+                    include: {
+                        uploadedBy: { select: { name: true } }
+                    }
+                }
+            }
+        })
+    },
+
     // 获取单个项目详情
     async getProjectById(id: string) {
         return prisma.project.findUnique({

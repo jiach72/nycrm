@@ -13,4 +13,8 @@ app.use(pinia)
 app.use(router)
 app.use(ElementPlus, { locale: zhCn })
 
+import VCalendar from 'v-calendar';
+import 'v-calendar/style.css';
+app.use(VCalendar, {})
+
 app.mount('#app')

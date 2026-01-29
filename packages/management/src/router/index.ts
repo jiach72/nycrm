@@ -54,7 +54,7 @@ const routes: RouteRecordRaw[] = [
             {
                 path: 'projects/:id',
                 name: 'ProjectDetail',
-                component: () => import('@/views/projects/ProjectList.vue'), // 暂时复用或指向新组件，后续创建详情页
+                component: () => import('@/views/projects/ProjectDetail.vue'),
                 meta: { title: '项目详情' },
             },
             {
@@ -62,6 +62,30 @@ const routes: RouteRecordRaw[] = [
                 name: 'Settings',
                 component: () => import('@/views/settings/Settings.vue'),
                 meta: { title: '系统设置' },
+            },
+            {
+                path: 'settings/users',
+                name: 'UserManagement',
+                component: () => import('@/views/settings/UserManagement.vue'),
+                meta: { title: '用户管理' },
+            },
+            {
+                path: 'settings/roles',
+                name: 'RolePermissions',
+                component: () => import('@/views/settings/RolePermissions.vue'),
+                meta: { title: '角色权限' },
+            },
+            {
+                path: 'messages',
+                name: 'MessageSend',
+                component: () => import('@/views/messages/MessageSend.vue'),
+                meta: { title: '消息发送' },
+            },
+            {
+                path: 'reports',
+                name: 'ReportCenter',
+                component: () => import('@/views/reports/ReportCenter.vue'),
+                meta: { title: '报表中心' },
             },
         ],
     },
@@ -84,7 +108,7 @@ router.beforeEach((to, from, next) => {
 
     // 设置页面标题
     const title = to.meta.title as string
-    document.title = title ? `${title} - 通海CRM` : '通海CRM'
+    document.title = title ? `${title} - 通海南洋CRM` : '通海南洋CRM'
 
     // 检查认证
     if (to.meta.requiresAuth !== false && !authStore.isAuthenticated) {

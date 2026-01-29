@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { Plus, List, Grid, Search, Filter } from '@element-plus/icons-vue'
 import { useProjectStore } from '@/stores/projectStore'
 import { storeToRefs } from 'pinia'
-import MainLayout from '@/layouts/MainLayout.vue'
+import ProjectForm from '@/components/projects/ProjectForm.vue'
 
 const router = useRouter()
 const projectStore = useProjectStore()
@@ -42,31 +42,37 @@ onMounted(() => {
   projectStore.fetchProjects()
 })
 
-const handleCreate = () => {
-  // router.push('/projects/create')
-  alert('新建项目功能即将上线')
-}
-
 const handleView = (id: string) => {
   router.push(`/projects/${id}`)
+}
+
+const showCreateDialog = ref(false)
+const handleCreate = () => {
+  showCreateDialog.value = true
+}
+
+const handleCreateSuccess = () => {
+   projectStore.fetchProjects()
 }
 </script>
 
 <template>
-  <MainLayout>
+  <div>
     <div class="page-header">
-      <div class="header-left">
+      <div class="page-header-left">
         <h1 class="page-title">项目管理</h1>
         <p class="page-subtitle">管理所有交付项目的进度与状态</p>
       </div>
-      <div class="header-right">
-        <el-radio-group v-model="viewMode" size="small">
-          <el-radio-button label="list"><el-icon><List /></el-icon> 列表</el-radio-button>
-          <el-radio-button label="board"><el-icon><Grid /></el-icon> 看板</el-radio-button>
+      <div class="page-header-right">
+        <el-radio-group v-model="viewMode">
+          <el-radio-button value="list"><el-icon><List /></el-icon> 列表</el-radio-button>
+          <el-radio-button value="board"><el-icon><Grid /></el-icon> 看板</el-radio-button>
         </el-radio-group>
         <el-button type="primary" :icon="Plus" @click="handleCreate">新建项目</el-button>
       </div>
     </div>
+    
+    <ProjectForm v-model:visible="showCreateDialog" @success="handleCreateSuccess" />
 
     <!-- 过滤器 -->
     <div class="filter-bar">
@@ -151,28 +157,21 @@ const handleView = (id: string) => {
       </el-table>
     </div>
 
-  </MainLayout>
+  </div>
 </template>
 
 <style scoped>
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
+/* 使用全局 page-header 样式，移除重复样式 */
 
-.page-title {
-  font-size: 24px;
+:deep(.el-radio-button__inner) {
+  padding: 10px 20px;
   font-weight: 600;
-  color: var(--color-heading);
-  margin: 0;
 }
 
-.page-subtitle {
-  color: var(--color-text-muted);
-  margin: 4px 0 0;
-  font-size: 14px;
+:deep(.el-radio-button__orig-radio:checked + .el-radio-button__inner) {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+  box-shadow: -1px 0 0 0 var(--color-primary);
 }
 
 .filter-bar {

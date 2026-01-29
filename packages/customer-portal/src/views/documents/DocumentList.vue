@@ -71,29 +71,43 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, computed } from 'vue'
+import { storeToRefs } from 'pinia'
 import { ElMessage } from 'element-plus'
 import { Upload, Document, UploadFilled } from '@element-plus/icons-vue'
+import { useDocumentStore } from '@/stores/documentStore'
 
 const activeTab = ref('all')
 const showUploadDialog = ref(false)
 
-// 模拟数据
-const documents = ref([
-  { id: '1', name: '服务合同.pdf', type: 'pdf', project: '新加坡公司注册', size: '2.5 MB', status: 'signed', uploadedAt: '2026-01-10' },
-  { id: '2', name: '护照扫描件.jpg', type: 'image', project: 'EP 签证申请', size: '1.2 MB', status: 'uploaded', uploadedAt: '2026-01-22' },
-  { id: '3', name: '公司章程.docx', type: 'word', project: '新加坡公司注册', size: '856 KB', status: 'pending', uploadedAt: '2026-01-15' },
-  { id: '4', name: '财务报表.xlsx', type: 'excel', project: '税务规划咨询', size: '1.8 MB', status: 'uploaded', uploadedAt: '2026-01-25' },
-])
+const documentStore = useDocumentStore()
+const { documents: rawDocuments, isLoading } = storeToRefs(documentStore)
 
-function getFileIconColor(type: string): string {
-  const map: Record<string, string> = {
-    pdf: '#dc2626',
-    word: '#2563eb',
-    excel: '#16a34a',
-    image: '#9333ea',
-  }
-  return map[type] || '#666'
+onMounted(() => {
+  documentStore.fetchMyDocuments()
+})
+
+const documents = computed(() => {
+  if (!rawDocuments.value) return []
+  return rawDocuments.value.map(doc => ({
+    id: doc.id,
+    name: doc.fileName,
+    type: doc.fileType,
+    project: doc.project?.title || '通用',
+    size: formatSize(doc.fileSize),
+    status: 'uploaded', // 暂时写死，后续可根据业务逻辑扩展
+    uploadedAt: doc.createdAt
+  }))
+})
+
+function getFileIconColor(type: string | undefined): string {
+  if (!type) return '#666'
+  const t = type.toLowerCase()
+  if (t.includes('pdf')) return '#dc2626'
+  if (t.includes('word') || t.includes('doc')) return '#2563eb'
+  if (t.includes('excel') || t.includes('xls')) return '#16a34a'
+  if (t.includes('image') || t.includes('jpg') || t.includes('png')) return '#9333ea'
+  return '#666'
 }
 
 function getDocStatusLabel(status: string): string {
@@ -120,6 +134,14 @@ function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('zh-CN')
 }
 
+function formatSize(bytes: number): string {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
+
 function handleDownload(doc: any) {
   ElMessage.success(`开始下载: ${doc.name}`)
 }
@@ -131,6 +153,7 @@ function handleDelete(doc: any) {
 function handleUploadSuccess() {
   ElMessage.success('上传成功')
   showUploadDialog.value = false
+  documentStore.fetchMyDocuments()
 }
 
 function handleUploadError() {

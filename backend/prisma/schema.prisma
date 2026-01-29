@@ -12,15 +12,7 @@ datasource db {
 
 // ==================== 枚举定义 ====================
 
-enum Role {
-  ADMIN
-  MANAGER
-  SALES
-  DELIVERY
-  COMPLIANCE
-  FINANCE
-  CUSTOMER
-}
+// 注意: Role 已改为数据表，见下方 model Role
 
 enum UserStatus {
   ACTIVE
@@ -80,27 +72,81 @@ enum AccessLevel {
   PUBLIC
 }
 
+// ==================== RBAC 模型 ====================
+
+// 角色表 (取代原 enum Role)
+model Role {
+  id          String   @id @default(cuid())
+  code        String   @unique  // "ADMIN", "MANAGER", "SALES" 等
+  name        String            // "管理员", "经理", "销售"
+  description String?
+  isSystem    Boolean  @default(false) @map("is_system") // 系统内置角色不可删除
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  users       User[]
+  permissions RolePermission[]
+
+  @@map("roles")
+}
+
+// 权限表
+model Permission {
+  id          String   @id @default(cuid())
+  code        String   @unique  // "leads:create", "projects:delete"
+  name        String            // "创建线索", "删除项目"
+  description String?
+  resource    String            // 资源名称: "leads", "projects"
+  action      String            // 操作名称: "create", "read", "update", "delete"
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  roles       RolePermission[]
+
+  @@index([resource])
+  @@map("permissions")
+}
+
+// 角色-权限关联表 (复合主键)
+model RolePermission {
+  roleId       String     @map("role_id")
+  permissionId String     @map("permission_id")
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
 // ==================== 数据模型 ====================
 
 // 用户
 model User {
-  id            String     @id @default(uuid())
-  email         String     @unique
-  name          String
-  passwordHash  String     @map("password_hash")
-  role          Role       @default(SALES)
-  department    String?
-  avatarUrl     String?    @map("avatar_url")
-  status        UserStatus @default(ACTIVE)
-  createdAt     DateTime   @default(now()) @map("created_at")
-  updatedAt     DateTime   @updatedAt @map("updated_at")
+  id                String     @id @default(uuid())
+  email             String     @unique
+  name              String
+  passwordHash      String     @map("password_hash")
+  roleId            String     @map("role_id")
+  role              Role       @relation(fields: [roleId], references: [id])
+  department        String?
+  avatarUrl         String?    @map("avatar_url")
+  status            UserStatus @default(ACTIVE)
+  setupToken        String?    @map("setup_token")       // 首次登录设置密码 token
+  setupTokenExpiry  DateTime?  @map("setup_token_expiry") // token 过期时间
+  createdAt         DateTime   @default(now()) @map("created_at")
+  updatedAt         DateTime   @updatedAt @map("updated_at")
 
   // 关联
-  assignedLeads Lead[]     @relation("AssignedLeads")
-  assignedTasks Task[]     @relation("AssignedTasks")
-  activities    Activity[]
-  documents     Document[] @relation("UploadedBy")
+  assignedLeads    Lead[]     @relation("AssignedLeads")
+  assignedTasks    Task[]     @relation("AssignedTasks")
+  appointments     Appointment[]
+  activities       Activity[]
+  documents        Document[] @relation("UploadedBy")
+  customer         Customer?  @relation("UserCustomer")
+  sentMessages     Message[]  @relation("SentMessages")
+  receivedMessages Message[]  @relation("ReceivedMessages")
 
+  @@index([roleId])
   @@map("users")
 }
 
@@ -126,9 +172,11 @@ model Lead {
   updatedAt       DateTime   @updatedAt @map("updated_at")
 
   // 关联
-  customer   Customer?
-  tasks      Task[]
-  activities Activity[]
+  customer        Customer?
+  tasks           Task[]
+  activities      Activity[]
+  appointments    Appointment[]
+  sourcedInquiries Inquiry[]
 
   @@index([assignedToId])
   @@index([status])
@@ -141,6 +189,12 @@ model Customer {
   id            String    @id @default(cuid())
   lead          Lead      @relation(fields: [leadId], references: [id])
   leadId        String    @unique @map("lead_id")
+  user          User?     @relation("UserCustomer", fields: [userId], references: [id])
+  userId        String?   @unique @map("user_id")
+  contactName   String?   @map("contact_name")
+  companyName   String?   @map("company_name")
+  email         String?
+  phone         String?
   familyMembers Json?     @map("family_members")
   companyInfo   Json?     @map("company_info")
   kycStatus     KycStatus @default(PENDING) @map("kyc_status")
@@ -149,7 +203,8 @@ model Customer {
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
   // 关联
-  projects Project[]
+  projects     Project[]
+  appointments Appointment[]
 
   @@map("customers")
 }
@@ -175,6 +230,7 @@ model Project {
   // 关联
   tasks     Task[]
   documents Document[]
+  messages  Message[]
 
   @@index([customerId])
   @@index([status])
@@ -250,4 +306,109 @@ model Activity {
   @@index([entityType, entityId])
   @@index([createdAt])
   @@map("activities")
+}
+
+// ==================== 站内消息系统 ====================
+
+enum MessageType {
+  SYSTEM       // 系统通知
+  PROJECT      // 项目相关
+  DOCUMENT     // 文档相关
+  PAYMENT      // 付款相关
+  REMINDER     // 提醒
+  ANNOUNCEMENT // 公告
+}
+
+// 站内消息
+model Message {
+  id          String      @id @default(uuid())
+  sender      User        @relation("SentMessages", fields: [senderId], references: [id])
+  senderId    String      @map("sender_id")
+  recipient   User        @relation("ReceivedMessages", fields: [recipientId], references: [id])
+  recipientId String      @map("recipient_id")
+  title       String
+  content     String      @db.Text
+  type        MessageType @default(SYSTEM)
+  isRead      Boolean     @default(false) @map("is_read")
+  readAt      DateTime?   @map("read_at")
+  projectId   String?     @map("project_id")
+  project     Project?    @relation(fields: [projectId], references: [id])
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  @@index([recipientId, isRead])
+  @@index([recipientId, createdAt])
+  @@index([senderId])
+  @@map("messages")
+}
+
+// ==================== 预约与咨询 ====================
+
+enum AppointmentType {
+  MEETING
+  CALL
+  VISIT
+  DEMO
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum InquiryStatus {
+  NEW
+  READ
+  PROCESSED
+  SPAM
+}
+
+// 预约
+model Appointment {
+  id          String            @id @default(cuid())
+  title       String
+  description String?           @db.Text
+  startTime   DateTime          @map("start_time")
+  endTime     DateTime          @map("end_time")
+  type        AppointmentType   @default(MEETING)
+  status      AppointmentStatus @default(SCHEDULED)
+  location    String?
+  meetingLink String?           @map("meeting_link")
+
+  // 关联
+  user       User      @relation(fields: [userId], references: [id])
+  userId     String    @map("user_id")
+  customer   Customer? @relation(fields: [customerId], references: [id])
+  customerId String?   @map("customer_id")
+  lead       Lead?     @relation(fields: [leadId], references: [id])
+  leadId     String?   @map("lead_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([startTime])
+  @@map("appointments")
+}
+
+// 咨询 (原始表单提交)
+model Inquiry {
+  id        String        @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  message   String        @db.Text
+  source    String?
+  status    InquiryStatus @default(NEW)
+  ipAddress String?       @map("ip_address")
+  
+  // 关联 - 可选关联处理后的线索
+  processedLead   Lead?   @relation(fields: [processedLeadId], references: [id])
+  processedLeadId String? @map("processed_lead_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("inquiries")
 }

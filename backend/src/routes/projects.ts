@@ -8,7 +8,7 @@ const router = Router()
 // 所有路由都需要认证
 router.use(authMiddleware)
 
-// 获取项目列表
+// 获取项目列表（管理端使用）
 router.get(
     '/',
     [
@@ -28,12 +28,31 @@ router.get(
     }
 )
 
+// 获取当前登录客户的项目列表
+router.get('/mine', async (req, res, next) => {
+    try {
+        // req.user 由 authMiddleware 提供，包含 email 和 role
+        const projects = await projectService.getMyProjects(req.user!.email)
+        res.json(projects)
+    } catch (error) {
+        next(error)
+    }
+})
+
 // 获取单个项目详情
 router.get('/:id', async (req, res, next) => {
     try {
-        const project = await projectService.getProjectById(req.params.id)
+        let project
+
+        // 如果是客户角色，执行越权校验，仅允许查看自己的项目
+        if (req.user!.role === 'CUSTOMER') {
+            project = await projectService.getMyProjectById(req.params.id, req.user!.email)
+        } else {
+            project = await projectService.getProjectById(req.params.id)
+        }
+
         if (!project) {
-            return res.status(404).json({ message: '项目不存在' })
+            return res.status(404).json({ message: '项目不存在或无权访问' })
         }
         res.json(project)
     } catch (error) {

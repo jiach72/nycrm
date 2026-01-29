@@ -1,251 +1,246 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, TaskStatus, TaskPriority, ProjectStatus, MessageType } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
-async function main() {
-    console.log('🌱 开始填充测试数据...')
+// ==================== 权限定义 ====================
+const PERMISSIONS = [
+    // 线索管理
+    { code: 'leads:create', name: '创建线索', resource: 'leads', action: 'create' },
+    { code: 'leads:read', name: '查看线索', resource: 'leads', action: 'read' },
+    { code: 'leads:update', name: '编辑线索', resource: 'leads', action: 'update' },
+    { code: 'leads:delete', name: '删除线索', resource: 'leads', action: 'delete' },
+    { code: 'leads:assign', name: '分配线索', resource: 'leads', action: 'assign' },
 
-    // 创建管理员用户
-    const adminPassword = await bcrypt.hash('admin123', 12)
-    const admin = await prisma.user.upsert({
-        where: { email: 'admin@tonghai.com' },
-        update: {},
+    // 客户管理
+    { code: 'customers:create', name: '创建客户', resource: 'customers', action: 'create' },
+    { code: 'customers:read', name: '查看客户', resource: 'customers', action: 'read' },
+    { code: 'customers:update', name: '编辑客户', resource: 'customers', action: 'update' },
+    { code: 'customers:delete', name: '删除客户', resource: 'customers', action: 'delete' },
+
+    // 项目管理
+    { code: 'projects:create', name: '创建项目', resource: 'projects', action: 'create' },
+    { code: 'projects:read', name: '查看项目', resource: 'projects', action: 'read' },
+    { code: 'projects:update', name: '编辑项目', resource: 'projects', action: 'update' },
+    { code: 'projects:delete', name: '删除项目', resource: 'projects', action: 'delete' },
+
+    // 任务管理
+    { code: 'tasks:create', name: '创建任务', resource: 'tasks', action: 'create' },
+    { code: 'tasks:read', name: '查看任务', resource: 'tasks', action: 'read' },
+    { code: 'tasks:update', name: '编辑任务', resource: 'tasks', action: 'update' },
+    { code: 'tasks:delete', name: '删除任务', resource: 'tasks', action: 'delete' },
+
+    // 文档管理
+    { code: 'documents:upload', name: '上传文档', resource: 'documents', action: 'upload' },
+    { code: 'documents:read', name: '查看文档', resource: 'documents', action: 'read' },
+    { code: 'documents:delete', name: '删除文档', resource: 'documents', action: 'delete' },
+
+    // 消息管理
+    { code: 'messages:send', name: '发送消息', resource: 'messages', action: 'send' },
+    { code: 'messages:read', name: '查看消息', resource: 'messages', action: 'read' },
+
+    // 用户管理
+    { code: 'users:create', name: '创建用户', resource: 'users', action: 'create' },
+    { code: 'users:read', name: '查看用户', resource: 'users', action: 'read' },
+    { code: 'users:update', name: '编辑用户', resource: 'users', action: 'update' },
+    { code: 'users:delete', name: '删除用户', resource: 'users', action: 'delete' },
+
+    // RBAC 权限管理 (仅 ADMIN)
+    { code: 'rbac:manage', name: '权限管理', resource: 'rbac', action: 'manage' },
+]
+
+// ==================== 角色定义 ====================
+const ROLES = [
+    { code: 'ADMIN', name: '管理员', description: '系统管理员，拥有所有权限', isSystem: true },
+    { code: 'MANAGER', name: '经理', description: '部门经理', isSystem: true },
+    { code: 'SALES', name: '销售', description: '销售人员', isSystem: true },
+    { code: 'DELIVERY', name: '交付', description: '交付团队成员', isSystem: true },
+    { code: 'COMPLIANCE', name: '合规', description: '合规人员', isSystem: true },
+    { code: 'FINANCE', name: '财务', description: '财务人员', isSystem: true },
+    { code: 'CUSTOMER', name: '客户', description: '客户账户', isSystem: true },
+]
+
+// ==================== 角色-权限映射 ====================
+const ROLE_PERMISSIONS: Record<string, string[]> = {
+    // ADMIN 拥有所有权限 (通过代码兜底，这里可以不配)
+    ADMIN: PERMISSIONS.map(p => p.code),
+
+    MANAGER: [
+        'leads:create', 'leads:read', 'leads:update', 'leads:delete', 'leads:assign',
+        'customers:create', 'customers:read', 'customers:update',
+        'projects:create', 'projects:read', 'projects:update', 'projects:delete',
+        'tasks:create', 'tasks:read', 'tasks:update', 'tasks:delete',
+        'documents:upload', 'documents:read', 'documents:delete',
+        'messages:send', 'messages:read',
+        'users:read',
+    ],
+
+    SALES: [
+        'leads:create', 'leads:read', 'leads:update',
+        'customers:read',
+        'projects:read',
+        'tasks:create', 'tasks:read', 'tasks:update',
+        'documents:upload', 'documents:read',
+        'messages:send', 'messages:read',
+    ],
+
+    DELIVERY: [
+        'leads:read',
+        'customers:read', 'customers:update',
+        'projects:read', 'projects:update',
+        'tasks:create', 'tasks:read', 'tasks:update',
+        'documents:upload', 'documents:read',
+        'messages:send', 'messages:read',
+    ],
+
+    COMPLIANCE: [
+        'customers:read', 'customers:update',
+        'projects:read',
+        'documents:read',
+    ],
+
+    FINANCE: [
+        'customers:read',
+        'projects:read',
+        'documents:read',
+    ],
+
+    CUSTOMER: [
+        // 客户通过 portal 路由访问，不需要 CRM 权限
+    ],
+}
+
+async function main() {
+    console.log('🌱 开始初始化 RBAC 数据...')
+
+    // 1. 创建/更新角色 (幂等)
+    console.log('📋 创建角色...')
+    const roleMap = new Map<string, string>() // code -> id
+
+    for (const roleData of ROLES) {
+        const role = await prisma.role.upsert({
+            where: { code: roleData.code },
+            update: { name: roleData.name, description: roleData.description },
+            create: roleData,
+        })
+        roleMap.set(role.code, role.id)
+        console.log(`  ✅ ${role.code} (${role.name})`)
+    }
+
+    // 2. 创建/更新权限 (幂等)
+    console.log('🔑 创建权限...')
+    const permissionMap = new Map<string, string>() // code -> id
+
+    for (const permData of PERMISSIONS) {
+        const permission = await prisma.permission.upsert({
+            where: { code: permData.code },
+            update: { name: permData.name, resource: permData.resource, action: permData.action },
+            create: permData,
+        })
+        permissionMap.set(permission.code, permission.id)
+    }
+    console.log(`  ✅ 共 ${PERMISSIONS.length} 个权限`)
+
+    // 3. 设置角色-权限关联 (只创建不存在的，不覆盖已修改的)
+    console.log('🔗 设置角色权限...')
+
+    for (const [roleCode, permCodes] of Object.entries(ROLE_PERMISSIONS)) {
+        const roleId = roleMap.get(roleCode)
+        if (!roleId) continue
+
+        for (const permCode of permCodes) {
+            const permissionId = permissionMap.get(permCode)
+            if (!permissionId) continue
+
+            // 使用 upsert 避免重复创建
+            await prisma.rolePermission.upsert({
+                where: { roleId_permissionId: { roleId, permissionId } },
+                update: {},
+                create: { roleId, permissionId },
+            })
+        }
+        console.log(`  ✅ ${roleCode}: ${permCodes.length} 个权限`)
+    }
+
+    // 4. 创建测试用户 (如果不存在)
+    console.log('👤 创建测试用户...')
+    const passwordHash = await bcrypt.hash('password123', 12)
+    const adminRoleId = roleMap.get('ADMIN')!
+    const salesRoleId = roleMap.get('SALES')!
+    const deliveryRoleId = roleMap.get('DELIVERY')!
+    const customerRoleId = roleMap.get('CUSTOMER')!
+
+    // 管理员
+    await prisma.user.upsert({
+        where: { email: 'admin@thny.sg' },
+        update: { roleId: adminRoleId },
         create: {
-            email: 'admin@tonghai.com',
+            email: 'admin@thny.sg',
             name: '系统管理员',
-            passwordHash: adminPassword,
-            role: 'ADMIN',
+            passwordHash,
+            roleId: adminRoleId,
             department: '管理层',
         },
     })
-    console.log(`✅ 创建管理员: ${admin.email}`)
+    console.log('  ✅ admin@thny.sg (管理员)')
 
-    // 创建销售顾问
-    const salesPassword = await bcrypt.hash('sales123', 12)
+    // 销售
     const sales1 = await prisma.user.upsert({
-        where: { email: 'lisi@tonghai.com' },
-        update: {},
+        where: { email: 'lisi@thny.sg' },
+        update: { roleId: salesRoleId },
         create: {
-            email: 'lisi@tonghai.com',
+            email: 'lisi@thny.sg',
             name: '李四',
-            passwordHash: salesPassword,
-            role: 'SALES',
+            passwordHash,
+            roleId: salesRoleId,
             department: '销售部',
         },
     })
-    console.log(`✅ 创建销售顾问: ${sales1.email}`)
+    console.log('  ✅ lisi@thny.sg (销售)')
 
-    const sales2 = await prisma.user.upsert({
-        where: { email: 'wangwu@tonghai.com' },
-        update: {},
-        create: {
-            email: 'wangwu@tonghai.com',
-            name: '王五',
-            passwordHash: salesPassword,
-            role: 'SALES',
-            department: '销售部',
-        },
-    })
-    console.log(`✅ 创建销售顾问: ${sales2.email}`)
-
-    // 创建交付经理
-    const deliveryPassword = await bcrypt.hash('delivery123', 12)
+    // 交付
     const delivery = await prisma.user.upsert({
-        where: { email: 'zhaoliu@tonghai.com' },
-        update: {},
+        where: { email: 'zhaoliu@thny.sg' },
+        update: { roleId: deliveryRoleId },
         create: {
-            email: 'zhaoliu@tonghai.com',
+            email: 'zhaoliu@thny.sg',
             name: '赵六',
-            passwordHash: deliveryPassword,
-            role: 'DELIVERY',
+            passwordHash,
+            roleId: deliveryRoleId,
             department: '交付部',
         },
     })
-    console.log(`✅ 创建交付经理: ${delivery.email}`)
+    console.log('  ✅ zhaoliu@thny.sg (交付)')
 
-    // 创建测试客户
-    const customerPassword = await bcrypt.hash('customer123', 12)
-    const customerUser = await prisma.user.upsert({
-        where: { email: 'client@example.com' },
-        update: {},
-        create: {
-            email: 'client@example.com',
-            name: '陈大文 (客户)',
-            passwordHash: customerPassword,
-            role: 'CUSTOMER',
-        },
-    })
-    console.log(`✅ 创建测试客户: ${customerUser.email}`)
+    // 客户账号
+    const customerEmails = ['client@example.com', 'liming@startup.io', 'harvey@global.com']
+    const customerNames = ['陈大文', '李明', 'Harvey Tan']
 
-    // 创建测试线索
-    const leads = await Promise.all([
-        prisma.lead.create({
-            data: {
-                contactName: '张三',
-                email: 'zhangsan@example.com',
-                phone: '+65 9123 4567',
-                companyName: 'ABC Tech Pte Ltd',
-                country: 'Singapore',
-                serviceTypes: ['Enterprise Setup', 'Visa Planning'],
-                budgetRange: '50-100k',
-                sourceChannel: 'website_form',
-                inquiryMessage: '您好，我们是一家科技公司，想咨询在新加坡设立子公司和员工签证的事宜。',
-                status: 'NEW',
-                tags: ['hot', 'enterprise'],
-                score: 85,
+    for (let i = 0; i < customerEmails.length; i++) {
+        await prisma.user.upsert({
+            where: { email: customerEmails[i] },
+            update: { roleId: customerRoleId },
+            create: {
+                email: customerEmails[i],
+                name: customerNames[i],
+                passwordHash,
+                roleId: customerRoleId,
             },
-        }),
-        prisma.lead.create({
-            data: {
-                contactName: '李明',
-                email: 'liming@startup.io',
-                phone: '+86 138 0000 1234',
-                companyName: 'Startup IO',
-                country: 'China',
-                serviceTypes: ['Enterprise Setup'],
-                budgetRange: '20-50k',
-                sourceChannel: 'referral',
-                inquiryMessage: '朋友推荐过来的，想了解新加坡公司注册流程。',
-                status: 'CONTACTED',
-                tags: ['startup'],
-                score: 70,
-                assignedToId: sales1.id,
-                lastContactedAt: new Date(),
-            },
-        }),
-        prisma.lead.create({
-            data: {
-                contactName: 'John Chen',
-                email: 'john.chen@globalcorp.com',
-                phone: '+1 415 555 0123',
-                companyName: 'Global Corp Inc',
-                country: 'USA',
-                serviceTypes: ['Tax Planning', 'Wealth Management'],
-                budgetRange: '>100k',
-                sourceChannel: 'website_form',
-                inquiryMessage: 'Looking for tax optimization strategies for our APAC expansion.',
-                status: 'QUALIFIED',
-                tags: ['enterprise', 'high-value'],
-                score: 95,
-                assignedToId: sales2.id,
-                lastContactedAt: new Date(),
-            },
-        }),
-        prisma.lead.create({
-            data: {
-                contactName: '王芳',
-                email: 'wangfang@family.com',
-                phone: '+86 139 8888 9999',
-                country: 'China',
-                serviceTypes: ['Visa Planning'],
-                budgetRange: '20-50k',
-                sourceChannel: 'website_form',
-                inquiryMessage: '想了解家庭移居新加坡的方案。',
-                status: 'NEW',
-                tags: ['family'],
-                score: 60,
-            },
-        }),
-    ])
-    console.log(`✅ 创建 ${leads.length} 条测试线索`)
+        })
+        console.log(`  ✅ ${customerEmails[i]} (客户)`)
+    }
 
-    // 创建测试任务
-    const tasks = await Promise.all([
-        prisma.task.create({
-            data: {
-                title: '联系张三确认需求',
-                description: '首次联系，了解具体需求和时间规划',
-                leadId: leads[0].id,
-                assignedToId: sales1.id,
-                priority: 'HIGH',
-                dueDate: new Date(Date.now() + 24 * 60 * 60 * 1000), // 明天
-                slaHours: 24,
-                status: 'NOT_STARTED',
-                tags: ['首次联系'],
-            },
-        }),
-        prisma.task.create({
-            data: {
-                title: '准备李明公司注册方案',
-                description: '根据沟通情况准备初步方案报价',
-                leadId: leads[1].id,
-                assignedToId: sales1.id,
-                priority: 'MEDIUM',
-                dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3天后
-                status: 'IN_PROGRESS',
-                tags: ['方案准备'],
-            },
-        }),
-        prisma.task.create({
-            data: {
-                title: 'John Chen 税务方案评审',
-                description: '与合规部门评审税务优化方案的可行性',
-                leadId: leads[2].id,
-                assignedToId: sales2.id,
-                priority: 'HIGH',
-                dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // 2天后
-                status: 'IN_PROGRESS',
-                tags: ['内部评审', '税务'],
-            },
-        }),
-        prisma.task.create({
-            data: {
-                title: '整理本周线索跟进报告',
-                assignedToId: sales1.id,
-                priority: 'LOW',
-                dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5天后
-                status: 'NOT_STARTED',
-                tags: ['报告'],
-            },
-        }),
-    ])
-    console.log(`✅ 创建 ${tasks.length} 条测试任务`)
-
-    // 创建关联的客户实体 (关联到第一个线索)
-    // 注意: Lead模型中 assignedToId 是销售，Customer 并不直接关联 User 表的账号，通常是通过 email 匹配或业务逻辑关联。
-    // 但在 seed 简单处理：我们假定第一个线索转换为了 Customer
-    const customerEntity = await prisma.customer.upsert({
-        where: { leadId: leads[0].id },
-        update: {},
-        create: {
-            leadId: leads[0].id,
-            kycStatus: 'APPROVED',
-            riskGrade: 'LOW',
-            companyInfo: {
-                name: 'ABC Tech Pte Ltd',
-                uen: '202401001W'
-            },
-            familyMembers: [
-                { name: 'Wife', relation: 'Spouse' }
-            ]
-        }
-    })
-    console.log(`✅ 创建客户实体 (关联线索: ${leads[0].contactName})`)
-
-    // 注意: 目前我们的 User 模型和 Customer 模型没有直接外键关联。
-    // 在真实逻辑中，Role=CUSTOMER 的 User.email 应该匹配 Lead.email 或 Customer.contactEmail。
-    // 这里我们将 seed 的 customerUser 邮箱设置得和 leads[0] 不一样，
-    // 如果需要登录后看到数据，需要确保 backend 逻辑是按 User.email == Lead.email 查询，
-    // 或者我们直接修改 leads[0] 的 email 为 client@example.com
-
-    await prisma.lead.update({
-        where: { id: leads[0].id },
-        data: { email: 'client@example.com', status: 'CONVERTED' } // 匹配测试账号邮箱
-    })
-    console.log(`🔄 更新线索邮箱以匹配测试账号: ${customerUser.email}`)
-
-    console.log('\n🎉 测试数据填充完成!')
-    console.log('\n📋 测试账号:')
-    console.log('  - 管理员: admin@tonghai.com / admin123')
-    console.log('  - 销售顾问: lisi@tonghai.com / sales123')
-    console.log('  - 销售顾问: wangwu@tonghai.com / sales123')
-    console.log('  - 交付经理: zhaoliu@tonghai.com / delivery123')
+    console.log('\n🎉 RBAC 数据初始化完成!')
+    console.log('\n📋 测试账号 (密码均为 password123):')
+    console.log('  - 管理员: admin@thny.sg')
+    console.log('  - 销售: lisi@thny.sg')
+    console.log('  - 交付: zhaoliu@thny.sg')
+    console.log('  - 客户: client@example.com')
 }
 
 main()
     .catch((e) => {
-        console.error('❌ 填充数据失败:', e)
+        console.error('❌ 初始化失败:', e)
         process.exit(1)
     })
     .finally(async () => {

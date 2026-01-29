@@ -10,6 +10,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/auth/Login.vue'),
         meta: { requiresAuth: false, title: '登录' },
     },
+    {
+        path: '/setup-password',
+        name: 'SetupPassword',
+        component: () => import('@/views/auth/SetupPassword.vue'),
+        meta: { requiresAuth: false, title: '设置密码' },
+    },
 
     // 客户门户 (需要登录)
     {

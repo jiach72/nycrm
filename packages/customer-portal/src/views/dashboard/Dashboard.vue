@@ -19,31 +19,31 @@
     <!-- 项目进度卡片 -->
     <div class="section-title">我的项目进度</div>
     <el-row :gutter="24">
-      <el-col :span="8" v-for="project in projects" :key="project.id">
+      <el-col :span="8" v-for="project in (projects || [])" :key="project.id" :xs="24" :sm="12" :md="8">
         <el-card class="project-card" shadow="hover" @click="$router.push(`/projects/${project.id}`)">
           <div class="project-header">
-            <span class="project-name">{{ project.name }}</span>
+            <span class="project-name">{{ project.title || '无标题' }}</span>
             <el-tag :type="getStatusType(project.status)" size="small">
               {{ getStatusLabel(project.status) }}
             </el-tag>
           </div>
           <div class="project-progress">
             <el-progress 
-              :percentage="project.progress" 
+              :percentage="project.completionPercentage || 0" 
               :stroke-width="10"
-              :color="getProgressColor(project.progress)"
+              :color="getProgressColor(project.completionPercentage || 0)"
             />
           </div>
           <div class="project-meta">
             <span>
               <el-icon><Calendar /></el-icon>
-              预计完成: {{ formatDate(project.estimatedCompletionDate) }}
+              预计完成: {{ formatDate(project.estimatedEndDate) }}
             </span>
           </div>
         </el-card>
       </el-col>
       
-      <el-col :span="24" v-if="projects.length === 0">
+      <el-col :span="24" v-if="!projects || (Array.isArray(projects) && projects.length === 0)">
         <el-empty description="暂无进行中的项目" />
       </el-col>
     </el-row>
@@ -92,75 +92,52 @@
 import { ref, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '@/stores'
+import { useProjectStore } from '@/stores/projectStore'
+import { portalApi } from '@/api'
 import { Folder, Upload, Calendar, CreditCard, Bell } from '@element-plus/icons-vue'
 
 const authStore = useAuthStore()
 const { user } = storeToRefs(authStore)
 
-// 模拟数据
-const projects = ref([
-  {
-    id: '1',
-    name: '新加坡公司注册',
-    status: 'IN_PROGRESS',
-    progress: 65,
-    estimatedCompletionDate: '2026-02-15',
-  },
-  {
-    id: '2',
-    name: 'EP 签证申请',
-    status: 'PENDING_DOCS',
-    progress: 30,
-    estimatedCompletionDate: '2026-03-01',
-  },
-])
+const projectStore = useProjectStore()
+const { projects, isLoading } = storeToRefs(projectStore)
 
-const todos = ref([
-  {
-    id: '1',
-    type: 'document',
-    title: '上传护照扫描件',
-    description: '用于公司注册申请',
-  },
-  {
-    id: '2',
-    type: 'payment',
-    title: '支付政府注册费',
-    description: 'SGD 315',
-  },
-])
+const todos = ref<any[]>([])
+const messages = ref<any[]>([])
 
-const messages = ref([
-  {
-    id: '1',
-    senderName: '李四',
-    content: '您好，公司名称已经核准通过，请提供股东信息。',
-    createdAt: '2026-01-28T10:30:00',
-  },
-])
-
-onMounted(() => {
-  // 这里可以调用 API 获取真实数据
+onMounted(async () => {
+  projectStore.fetchMyProjects()
+  
+  // 加载待办事项/通知
+  try {
+    const notifications = await portalApi.getNotifications() as any
+    todos.value = Array.isArray(notifications) ? notifications : []
+  } catch (err) {
+    console.error('Failed to fetch notifications:', err)
+    todos.value = []
+  }
 })
 
 function getStatusLabel(status: string): string {
+  if (!status) return '未知'
   const map: Record<string, string> = {
-    NOT_STARTED: '未开始',
-    IN_PROGRESS: '进行中',
-    PENDING_DOCS: '等待文件',
-    UNDER_REVIEW: '审核中',
+    PLANNING: '规划中',
+    ACTIVE: '进行中',
+    ON_HOLD: '暂停',
     COMPLETED: '已完成',
+    ARCHIVED: '归档'
   }
   return map[status] || status
 }
 
 function getStatusType(status: string): 'success' | 'warning' | 'danger' | 'info' {
+  if (!status) return 'info'
   const map: Record<string, 'success' | 'warning' | 'danger' | 'info'> = {
-    NOT_STARTED: 'info',
-    IN_PROGRESS: 'warning',
-    PENDING_DOCS: 'danger',
-    UNDER_REVIEW: 'warning',
+    PLANNING: 'info',
+    ACTIVE: 'success',
+    ON_HOLD: 'warning',
     COMPLETED: 'success',
+    ARCHIVED: 'info'
   }
   return map[status] || 'info'
 }
@@ -172,6 +149,7 @@ function getProgressColor(progress: number): string {
 }
 
 function formatDate(dateStr: string): string {
+  if (!dateStr) return '-'
   return new Date(dateStr).toLocaleDateString('zh-CN')
 }
 </script>

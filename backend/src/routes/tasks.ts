@@ -1,4 +1,4 @@
-import { Router } from 'express'
+import { Router, Request, Response, NextFunction } from 'express'
 import { body, param, query } from 'express-validator'
 import { taskService } from '../services'
 import { validate, authMiddleware } from '../middlewares'
@@ -21,7 +21,7 @@ router.get(
         query('leadId').optional().isString(),
     ],
     validate,
-    async (req, res, next) => {
+    async (req: Request, res: Response, next: NextFunction) => {
         try {
             const filters = {
                 status: req.query.status as string | undefined,
@@ -48,7 +48,7 @@ router.get(
 /**
  * GET /tasks/board - 获取看板视图数据
  */
-router.get('/board', authMiddleware, async (req, res, next) => {
+router.get('/board', authMiddleware, async (req: Request, res: Response, next: NextFunction) => {
     try {
         const assignedToId = req.query.assignedToId as string | undefined
         const result = await taskService.getTasksByStatus(assignedToId)
@@ -61,7 +61,7 @@ router.get('/board', authMiddleware, async (req, res, next) => {
 /**
  * GET /tasks/stats - 获取任务统计
  */
-router.get('/stats', authMiddleware, async (req, res, next) => {
+router.get('/stats', authMiddleware, async (req: Request, res: Response, next: NextFunction) => {
     try {
         const assignedToId = req.query.assignedToId as string | undefined
         const stats = await taskService.getTaskStats(assignedToId)
@@ -79,7 +79,7 @@ router.get(
     authMiddleware,
     [param('id').notEmpty()],
     validate,
-    async (req, res, next) => {
+    async (req: Request, res: Response, next: NextFunction) => {
         try {
             const task = await taskService.getTaskById(req.params.id)
             res.json(task)
@@ -101,7 +101,7 @@ router.post(
         body('dueDate').optional().isISO8601(),
     ],
     validate,
-    async (req, res, next) => {
+    async (req: Request, res: Response, next: NextFunction) => {
         try {
             const task = await taskService.createTask(req.body)
             res.status(201).json(task)
@@ -123,7 +123,7 @@ router.put(
         body('priority').optional().isIn(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']),
     ],
     validate,
-    async (req, res, next) => {
+    async (req: Request, res: Response, next: NextFunction) => {
         try {
             const task = await taskService.updateTask(req.params.id, req.body)
             res.json(task)
@@ -141,7 +141,7 @@ router.delete(
     authMiddleware,
     [param('id').notEmpty()],
     validate,
-    async (req, res, next) => {
+    async (req: Request, res: Response, next: NextFunction) => {
         try {
             const result = await taskService.deleteTask(req.params.id)
             res.json(result)

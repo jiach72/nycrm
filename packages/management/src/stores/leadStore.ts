@@ -97,6 +97,19 @@ export const useLeadStore = defineStore('lead', () => {
         total.value--
     }
 
+    async function convertToCustomer(id: string) {
+        const result = await leadApi.convertToCustomer(id)
+        // 更新本地线索状态
+        const index = leads.value.findIndex(l => l.id === id)
+        if (index !== -1) {
+            leads.value[index] = { ...leads.value[index], status: 'CONVERTED' }
+        }
+        if (currentLead.value?.id === id) {
+            currentLead.value = { ...currentLead.value, status: 'CONVERTED' }
+        }
+        return result
+    }
+
     function setFilters(newFilters: LeadFilters) {
         filters.value = newFilters
         page.value = 1
@@ -128,6 +141,7 @@ export const useLeadStore = defineStore('lead', () => {
         updateLead,
         assignLead,
         deleteLead,
+        convertToCustomer,
         setFilters,
         setPage,
     }

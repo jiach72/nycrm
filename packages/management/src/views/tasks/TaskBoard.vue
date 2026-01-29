@@ -19,38 +19,48 @@
         </div>
         
         <div class="column-content">
-          <div
-            v-for="task in boardData?.[status]"
-            :key="task.id"
-            class="task-card"
-            @click="handleTaskClick(task)"
+          <VueDraggable
+            v-if="boardData?.[status]"
+            v-model="boardData[status]"
+            group="tasks"
+            item-key="id"
+            class="draggable-list"
+            @change="(e) => handleDragChange(e, status)"
+            :data-status="status"
           >
-            <div class="task-title">{{ task.title }}</div>
-            <div class="task-meta">
-              <el-tag 
-                :type="getPriorityType(task.priority)" 
-                size="small"
+            <template #item="{ element: task }">
+              <div
+                class="task-card"
+                @click="handleTaskClick(task)"
               >
-                {{ getPriorityLabel(task.priority) }}
-              </el-tag>
-              <span v-if="task.dueDate" class="due-date" :class="{ overdue: isOverdue(task.dueDate) }">
-                {{ formatDueDate(task.dueDate) }}
-              </span>
-            </div>
-            <div class="task-footer">
-              <span v-if="task.lead" class="related-lead">
-                <el-icon><User /></el-icon>
-                {{ task.lead.contactName }}
-              </span>
-              <el-avatar 
-                v-if="task.assignedTo" 
-                :size="24"
-                class="assignee-avatar"
-              >
-                {{ task.assignedTo.name?.[0] }}
-              </el-avatar>
-            </div>
-          </div>
+                <div class="task-title">{{ task.title }}</div>
+                <div class="task-meta">
+                  <el-tag 
+                    :type="getPriorityType(task.priority)" 
+                    size="small"
+                  >
+                    {{ getPriorityLabel(task.priority) }}
+                  </el-tag>
+                  <span v-if="task.dueDate" class="due-date" :class="{ overdue: isOverdue(task.dueDate) }">
+                    {{ formatDueDate(task.dueDate) }}
+                  </span>
+                </div>
+                <div class="task-footer">
+                  <span v-if="task.lead" class="related-lead">
+                    <el-icon><User /></el-icon>
+                    {{ task.lead.contactName }}
+                  </span>
+                  <el-avatar 
+                    v-if="task.assignedTo" 
+                    :size="24"
+                    class="assignee-avatar"
+                  >
+                    {{ task.assignedTo.name?.[0] }}
+                  </el-avatar>
+                </div>
+              </div>
+            </template>
+          </VueDraggable>
           
           <el-empty 
             v-if="!boardData?.[status]?.length" 
@@ -157,6 +167,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { Plus, User } from '@element-plus/icons-vue'
+import VueDraggable from 'vuedraggable'
 import { useTaskStore } from '@/stores'
 import type { Task, TaskStatus } from '@tonghai/shared/types'
 
@@ -219,6 +230,24 @@ async function handleCreate() {
       submitting.value = false
     }
   })
+}
+
+async function handleDragChange(event: any, newStatus: TaskStatus) {
+  // 只处理添加到新列的事件 (added)
+  // removed 事件不需要处理，vuedraggable 会自动从原数组移除
+  // moved 事件 (同一列内排序) 暂不处理持久化，只更新 UI
+  if (event.added) {
+    const task = event.added.element as Task
+    try {
+      // 调用 Store 的 moveTask 更新后端状态
+      await taskStore.moveTask(task.id, newStatus)
+      ElMessage.success('任务状态已更新')
+    } catch (error: any) {
+      ElMessage.error(error.message || '移动失败')
+      // 如果失败，应该刷新看板以重置 UI (简单回滚)
+      taskStore.fetchBoard()
+    }
+  }
 }
 
 async function handleStatusChange(newStatus: TaskStatus) {
@@ -371,7 +400,14 @@ function isOverdue(dateStr: string): boolean {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+}
+
+.draggable-list {
+  display: flex;
+  flex-direction: column;
   gap: 12px;
+  min-height: 100px; /* 确保空列也有放置区域 */
+  height: 100%;
 }
 
 .task-card {

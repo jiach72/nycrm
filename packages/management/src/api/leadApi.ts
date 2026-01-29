@@ -73,6 +73,20 @@ export const leadApi = {
     delete(id: string): Promise<{ success: boolean }> {
         return apiClient.delete(`/leads/${id}`)
     },
+
+    /**
+     * 将线索转化为客户
+     */
+    convertToCustomer(id: string): Promise<{
+        success: boolean
+        message: string
+        customerId: string
+        userId: string
+        setupToken: string
+        setupUrl: string
+    }> {
+        return apiClient.post(`/leads/${id}/convert`)
+    },
 }
 
 export default leadApi

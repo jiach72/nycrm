@@ -90,7 +90,7 @@ const unreadCount = ref(0)
 onMounted(async () => {
   try {
     const result = await messageApi.getUnreadCount()
-    unreadCount.value = result.count || 0
+    unreadCount.value = result.data?.count || 0
   } catch {
     // 忽略错误
   }
@@ -151,7 +151,7 @@ function handleCommand(command: string) {
 }
 
 .logo-sub {
-  font-size: 11px;
+  font-size: 16px;
   color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.1em;

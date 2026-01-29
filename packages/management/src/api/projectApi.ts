@@ -1,4 +1,4 @@
-import apiClient from '@/utils/apiClient'
+import apiClient from './apiClient'
 import type { PaginatedResponse } from '@/types'
 
 // 项目类型定义 (补充到 types/index.ts 中)

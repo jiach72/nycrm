@@ -1,0 +1,101 @@
+import { Router, Request, Response, NextFunction } from 'express'
+import { body, query, param } from 'express-validator'
+import { authMiddleware, adminAuth, validate } from '../middlewares'
+import messageService from '../services/messageService'
+
+const router = Router()
+
+/**
+ * POST /messages/send - 发送站内消息（管理端使用）
+ */
+router.post(
+    '/send',
+    authMiddleware,
+    adminAuth,
+    [
+        body('recipientId').notEmpty().withMessage('请选择接收者'),
+        body('title').notEmpty().withMessage('请输入消息标题'),
+        body('content').notEmpty().withMessage('请输入消息内容'),
+        body('type').optional().isIn(['SYSTEM', 'PROJECT', 'DOCUMENT', 'PAYMENT', 'REMINDER', 'ANNOUNCEMENT']),
+        body('projectId').optional(),
+    ],
+    validate,
+    async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const message = await messageService.send({
+                senderId: req.user!.id,
+                ...req.body,
+            })
+            res.status(201).json(message)
+        } catch (error) {
+            next(error)
+        }
+    }
+)
+
+/**
+ * POST /messages/send-bulk - 批量发送消息（管理端使用）
+ */
+router.post(
+    '/send-bulk',
+    authMiddleware,
+    adminAuth,
+    [
+        body('recipientIds').isArray({ min: 1 }).withMessage('请选择至少一个接收者'),
+        body('title').notEmpty().withMessage('请输入消息标题'),
+        body('content').notEmpty().withMessage('请输入消息内容'),
+    ],
+    validate,
+    async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const result = await messageService.sendBulk(
+                req.user!.id,
+                req.body.recipientIds,
+                req.body.title,
+                req.body.content,
+                req.body.type || 'ANNOUNCEMENT'
+            )
+            res.json(result)
+        } catch (error) {
+            next(error)
+        }
+    }
+)
+
+/**
+ * GET /messages/sent - 获取已发送的消息（管理端）
+ */
+router.get(
+    '/sent',
+    authMiddleware,
+    adminAuth,
+    async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const page = parseInt(req.query.page as string) || 1
+            const limit = parseInt(req.query.limit as string) || 20
+            const result = await messageService.getSentMessages(req.user!.id, page, limit)
+            res.json(result)
+        } catch (error) {
+            next(error)
+        }
+    }
+)
+
+/**
+ * GET /messages/customers - 获取可发送消息的客户列表（管理端）
+ */
+router.get(
+    '/customers',
+    authMiddleware,
+    adminAuth,
+    async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const customers = await messageService.getCustomerUsers()
+            res.json(customers)
+        } catch (error) {
+            next(error)
+        }
+    }
+)
+
+export default router

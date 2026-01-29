@@ -1,3 +1,5 @@
 export { useAuthStore } from './authStore'
 export { useLeadStore } from './leadStore'
 export { useTaskStore } from './taskStore'
+export { useAppointmentStore } from './appointmentStore'
+export { useInquiryStore } from './inquiryStore'

@@ -1,129 +1,146 @@
 <template>
-  <div class="project-detail">
-    <el-button :icon="ArrowLeft" text @click="$router.back()">返回项目列表</el-button>
+  <div class="project-detail" v-loading="isLoading">
+    <el-button :icon="ArrowLeft" text @click="$router.push('/projects')">返回项目列表</el-button>
     
-    <!-- 项目头部 -->
-    <div class="project-header">
-      <div class="header-info">
-        <h1>{{ project.name }}</h1>
-        <el-tag :type="getStatusType(project.status)" size="large">
-          {{ getStatusLabel(project.status) }}
-        </el-tag>
+    <div v-if="project">
+      <!-- 项目头部 -->
+      <div class="project-header">
+        <div class="header-info">
+          <h1>{{ project.title || '无标题项目' }}</h1>
+          <el-tag :type="getStatusType(project.status)" size="large">
+            {{ getStatusLabel(project.status) }}
+          </el-tag>
+        </div>
+        <div class="header-meta">
+          <span><el-icon><Calendar /></el-icon> 开始: {{ formatDate(project.startDate) }}</span>
+          <span><el-icon><Timer /></el-icon> 预计完成: {{ formatDate(project.estimatedEndDate) }}</span>
+        </div>
       </div>
-      <div class="header-meta">
-        <span><el-icon><Calendar /></el-icon> 开始: {{ formatDate(project.startDate) }}</span>
-        <span><el-icon><Timer /></el-icon> 预计完成: {{ formatDate(project.estimatedCompletionDate) }}</span>
-      </div>
-    </div>
 
-    <el-row :gutter="24">
-      <!-- 左侧：进度时间线 -->
-      <el-col :span="16">
-        <el-card class="timeline-card">
-          <template #header>
-            <span>项目进度</span>
-          </template>
-          <el-timeline>
-            <el-timeline-item
-              v-for="step in project.steps"
-              :key="step.id"
-              :type="getStepType(step.status)"
-              :hollow="step.status === 'pending'"
-              :timestamp="step.completedAt || step.estimatedDate"
-              placement="top"
-            >
-              <div class="step-content">
-                <div class="step-title">{{ step.title }}</div>
-                <div class="step-desc">{{ step.description }}</div>
-                <el-tag v-if="step.status === 'current'" type="primary" size="small">
-                  当前阶段
-                </el-tag>
+      <el-row :gutter="24">
+        <!-- 左侧：进度时间线 -->
+        <el-col :span="16" :xs="24">
+          <el-card class="timeline-card">
+            <template #header>
+              <div class="timeline-header">
+                <span>项目进度</span>
+                <span class="overall-progress">{{ project.completionPercentage || 0 }}% 已完成</span>
               </div>
-            </el-timeline-item>
-          </el-timeline>
-        </el-card>
-      </el-col>
+            </template>
+            <el-timeline v-if="steps && steps.length > 0">
+              <el-timeline-item
+                v-for="step in steps"
+                :key="step.id"
+                :type="getStepType(step.status)"
+                :hollow="step.status === 'pending'"
+                :timestamp="step.completedAt || step.estimatedDate"
+                placement="top"
+              >
+                <div class="step-content">
+                  <div class="step-title">{{ step.title }}</div>
+                  <div class="step-desc">{{ step.description || '无具体说明' }}</div>
+                </div>
+              </el-timeline-item>
+            </el-timeline>
+            <el-empty v-else description="暂无进度详情" />
+          </el-card>
+        </el-col>
 
-      <!-- 右侧：信息栏 -->
-      <el-col :span="8">
-        <el-card class="info-card">
-          <template #header>
-            <span>负责团队</span>
-          </template>
-          <div class="consultant-info">
-            <el-avatar :size="48">{{ project.consultant?.name?.[0] }}</el-avatar>
-            <div class="consultant-detail">
-              <div class="name">{{ project.consultant?.name }}</div>
-              <div class="title">高级顾问</div>
+        <!-- 右侧：信息栏 -->
+        <el-col :span="8" :xs="24">
+          <el-card class="info-card">
+            <template #header>
+              <span>负责团队</span>
+            </template>
+            <div class="consultant-info">
+              <el-avatar :size="48">{{ project.consultant?.name?.[0] || '管' }}</el-avatar>
+              <div class="consultant-detail">
+                <div class="name">{{ project.consultant?.name || '项目经理' }}</div>
+                <div class="title">通海高级顾问</div>
+              </div>
             </div>
-          </div>
-          <el-button type="primary" style="width: 100%; margin-top: 16px;">
-            <el-icon><ChatDotRound /></el-icon> 联系顾问
-          </el-button>
-        </el-card>
+            <el-button type="primary" style="width: 100%; margin-top: 16px;">
+              <el-icon><ChatDotRound /></el-icon> 联系顾问
+            </el-button>
+          </el-card>
 
-        <el-card class="info-card" style="margin-top: 16px;">
-          <template #header>
-            <span>相关文档</span>
-          </template>
-          <div class="doc-list">
-            <div v-for="doc in project.documents" :key="doc.id" class="doc-item">
-              <el-icon><Document /></el-icon>
-              <span>{{ doc.name }}</span>
+          <el-card class="info-card" style="margin-top: 16px;">
+            <template #header>
+              <span>相关文档</span>
+            </template>
+            <div class="doc-list" v-if="project.documents && project.documents.length > 0">
+              <div v-for="doc in project.documents" :key="doc.id" class="doc-item">
+                <el-icon><Document /></el-icon>
+                <span class="doc-name">{{ doc.fileName }}</span>
+                <el-button link type="primary" size="small">预览</el-button>
+              </div>
             </div>
-          </div>
-          <el-button style="width: 100%; margin-top: 16px;" @click="$router.push('/documents')">
-            查看全部文档
-          </el-button>
-        </el-card>
-      </el-col>
-    </el-row>
+            <el-empty v-else description="暂无相关文档" :image-size="40" />
+            <el-button style="width: 100%; margin-top: 16px;" @click="$router.push('/documents')">
+              查看全部文档
+            </el-button>
+          </el-card>
+        </el-col>
+      </el-row>
+    </div>
+    <el-empty v-else-if="!isLoading" description="未找到项目详情" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { storeToRefs } from 'pinia'
 import { ArrowLeft, Calendar, Timer, ChatDotRound, Document } from '@element-plus/icons-vue'
+import { useProjectStore } from '@/stores/projectStore'
 
-// 模拟数据
-const project = ref({
-  id: '1',
-  name: '新加坡公司注册',
-  status: 'IN_PROGRESS',
-  startDate: '2026-01-10',
-  estimatedCompletionDate: '2026-02-15',
-  consultant: { name: '李四' },
-  steps: [
-    { id: '1', title: '咨询确认', description: '确认服务范围和费用', status: 'completed', completedAt: '2026-01-10' },
-    { id: '2', title: '名称核准', description: '提交公司名称申请', status: 'completed', completedAt: '2026-01-15' },
-    { id: '3', title: '文件准备', description: '收集股东和董事资料', status: 'current', estimatedDate: '2026-01-28' },
-    { id: '4', title: '提交注册', description: '向 ACRA 提交注册申请', status: 'pending', estimatedDate: '2026-02-01' },
-    { id: '5', title: '注册完成', description: '获取公司注册证书', status: 'pending', estimatedDate: '2026-02-10' },
-  ],
-  documents: [
-    { id: '1', name: '服务合同.pdf' },
-    { id: '2', name: '公司章程模板.docx' },
-  ],
+const route = useRoute()
+const router = useRouter()
+const projectStore = useProjectStore()
+const { currentProject: project, isLoading } = storeToRefs(projectStore)
+
+const projectId = route.params.id as string
+
+onMounted(() => {
+  projectStore.fetchProject(projectId)
 })
+
+const steps = computed(() => {
+  if (!project.value?.tasks) return []
+  return project.value.tasks.map((task: any) => ({
+    id: task.id,
+    title: task.title,
+    description: task.description,
+    status: mapTaskStatus(task.status),
+    completedAt: task.completedAt ? formatDate(task.completedAt) : null,
+    estimatedDate: task.dueDate ? formatDate(task.dueDate) : null
+  }))
+})
+
+function mapTaskStatus(status: string) {
+  if (status === 'DONE') return 'completed'
+  if (status === 'IN_PROGRESS') return 'current'
+  return 'pending'
+}
 
 function getStatusLabel(status: string): string {
   const map: Record<string, string> = {
-    NOT_STARTED: '未开始',
-    IN_PROGRESS: '进行中',
-    PENDING_DOCS: '等待文件',
-    UNDER_REVIEW: '审核中',
+    PLANNING: '规划中',
+    ACTIVE: '进行中',
+    ON_HOLD: '暂停',
     COMPLETED: '已完成',
+    ARCHIVED: '归档'
   }
   return map[status] || status
 }
 
 function getStatusType(status: string): 'success' | 'warning' | 'danger' | 'info' {
   const map: Record<string, 'success' | 'warning' | 'danger' | 'info'> = {
-    NOT_STARTED: 'info',
-    IN_PROGRESS: 'warning',
-    PENDING_DOCS: 'danger',
-    UNDER_REVIEW: 'warning',
+    PLANNING: 'info',
+    ACTIVE: 'success',
+    ON_HOLD: 'warning',
     COMPLETED: 'success',
+    ARCHIVED: 'info'
   }
   return map[status] || 'info'
 }
@@ -137,7 +154,8 @@ function getStepType(status: string): 'primary' | 'success' | 'info' {
   return map[status] || 'info'
 }
 
-function formatDate(dateStr: string): string {
+function formatDate(dateStr: string | null): string {
+  if (!dateStr) return '-'
   return new Date(dateStr).toLocaleDateString('zh-CN')
 }
 </script>

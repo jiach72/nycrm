@@ -21,6 +21,7 @@ export const authService = {
     async login({ email, password }: LoginInput) {
         const user = await prisma.user.findUnique({
             where: { email },
+            include: { role: true },
         })
 
         if (!user) {
@@ -48,7 +49,8 @@ export const authService = {
                 id: user.id,
                 name: user.name,
                 email: user.email,
-                role: user.role,
+                role: user.role.code,
+                roleId: user.roleId,
                 avatarUrl: user.avatarUrl,
             },
         }
@@ -66,6 +68,12 @@ export const authService = {
             throw new UnauthorizedError('该邮箱已被注册')
         }
 
+        // 获取 CUSTOMER 角色
+        const customerRole = await prisma.role.findUnique({ where: { code: 'CUSTOMER' } })
+        if (!customerRole) {
+            throw new Error('系统配置错误: CUSTOMER 角色不存在')
+        }
+
         const passwordHash = await bcrypt.hash(password, 12)
 
         const user = await prisma.user.create({
@@ -73,15 +81,16 @@ export const authService = {
                 email,
                 name,
                 passwordHash,
-                role: 'CUSTOMER',
+                roleId: customerRole.id,
             },
+            include: { role: true },
         })
 
         return {
             id: user.id,
             name: user.name,
             email: user.email,
-            role: user.role,
+            role: user.role.code,
         }
     },
 
@@ -101,6 +110,7 @@ export const authService = {
 
             const user = await prisma.user.findUnique({
                 where: { id: decoded.sub },
+                include: { role: true },
             })
 
             if (!user || user.status !== 'ACTIVE') {
@@ -128,7 +138,8 @@ export const authService = {
                 id: true,
                 email: true,
                 name: true,
-                role: true,
+                roleId: true,
+                role: { select: { code: true, name: true } },
                 department: true,
                 avatarUrl: true,
                 status: true,
@@ -140,22 +151,27 @@ export const authService = {
             throw new NotFoundError('用户不存在')
         }
 
-        return user
+        return {
+            ...user,
+            roleCode: user.role.code,
+            roleName: user.role.name,
+        }
     },
 
     /**
      * 生成访问令牌
      */
-    generateAccessToken(user: { id: string; email: string; role: string }) {
+    generateAccessToken(user: { id: string; email: string; role: { code: string }; roleId: string }) {
         return jwt.sign(
             {
                 sub: user.id,
                 email: user.email,
-                role: user.role,
+                role: user.role.code,
+                roleId: user.roleId,
                 type: 'access',
             },
             config.jwt.secret,
-            { expiresIn: config.jwt.expiresIn }
+            { expiresIn: config.jwt.expiresIn as `${number}${'s' | 'm' | 'h' | 'd'}` }
         )
     },
 
@@ -169,8 +185,77 @@ export const authService = {
                 type: 'refresh',
             },
             config.jwt.secret,
-            { expiresIn: config.jwt.refreshExpiresIn }
+            { expiresIn: config.jwt.refreshExpiresIn as `${number}${'s' | 'm' | 'h' | 'd'}` }
         )
+    },
+
+    /**
+     * 验证设置密码 Token
+     */
+    async validateSetupToken(token: string) {
+        const user = await prisma.user.findFirst({
+            where: {
+                setupToken: token,
+                setupTokenExpiry: { gt: new Date() },
+            },
+        })
+
+        if (!user) {
+            throw new UnauthorizedError('链接无效或已过期')
+        }
+
+        return {
+            valid: true,
+            email: user.email,
+            name: user.name,
+        }
+    },
+
+    /**
+     * 首次登录设置密码
+     */
+    async setupPassword(token: string, password: string) {
+        const user = await prisma.user.findFirst({
+            where: {
+                setupToken: token,
+                setupTokenExpiry: { gt: new Date() },
+            },
+        })
+
+        if (!user) {
+            throw new UnauthorizedError('链接无效或已过期')
+        }
+
+        const passwordHash = await bcrypt.hash(password, 12)
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                passwordHash,
+                setupToken: null,
+                setupTokenExpiry: null,
+            },
+        })
+
+        // 自动登录
+        const accessToken = this.generateAccessToken(user)
+        const refreshToken = this.generateRefreshToken(user)
+
+        return {
+            success: true,
+            message: '密码设置成功',
+            accessToken,
+            refreshToken,
+            tokenType: 'Bearer',
+            expiresIn: 900,
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                avatarUrl: user.avatarUrl,
+            },
+        }
     },
 }
 

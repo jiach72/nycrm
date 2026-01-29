@@ -1,0 +1,132 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ========== 构建前端 ==========
+  build-frontend:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package: [website, management, customer-portal]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build ${{ matrix.package }}
+        run: |
+          if [ "${{ matrix.package }}" == "website" ]; then
+            npm run build:website
+          elif [ "${{ matrix.package }}" == "management" ]; then
+            npm run build:management
+          else
+            npm run build:portal
+          fi
+        env:
+          VITE_API_URL: ${{ secrets.API_URL }}
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.package }}-dist
+          path: packages/${{ matrix.package }}/dist
+          retention-days: 1
+
+  # ========== 构建后端 Docker 镜像 ==========
+  build-backend:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend
+          tags: |
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+      
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  # ========== 部署到服务器 ==========
+  deploy:
+    needs: [build-frontend, build-backend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download website artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: website-dist
+          path: dist/website
+      
+      - name: Download management artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: management-dist
+          path: dist/management
+      
+      - name: Download customer-portal artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: customer-portal-dist
+          path: dist/customer-portal
+      
+      - name: Upload frontend files via SCP
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "dist/*"
+          target: "/var/www/tonghai/static"
+          strip_components: 1
+      
+      - name: Deploy backend via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /var/www/tonghai
+            echo "Pulling latest images..."
+            docker compose pull
+            echo "Recreating containers..."
+            docker compose up -d --force-recreate backend
+            echo "Running database migrations..."
+            docker compose exec -T backend npx prisma migrate deploy
+            echo "Deployment complete!"

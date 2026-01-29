@@ -383,6 +383,97 @@ export const leadService = {
             trend, // 新增趋势数据
         }
     },
+
+    /**
+     * 将线索转化为客户
+     * 创建 Customer 记录和关联的 User 账号（带首次登录设置密码 token）
+     */
+    async convertToCustomer(leadId: string, operatorId: string) {
+        const lead = await prisma.lead.findUnique({ where: { id: leadId } })
+
+        if (!lead) {
+            throw new NotFoundError('线索不存在')
+        }
+
+        if (lead.status === 'CONVERTED') {
+            throw new ConflictError('该线索已转化为客户')
+        }
+
+        if (!lead.email) {
+            throw new ConflictError('线索缺少邮箱，无法创建客户账号')
+        }
+
+        // 检查是否已存在同邮箱的用户
+        const existingUser = await prisma.user.findUnique({ where: { email: lead.email } })
+        if (existingUser) {
+            throw new ConflictError('该邮箱已存在用户账号')
+        }
+
+        // 生成首次登录设置密码的 token
+        const crypto = await import('crypto')
+        const setupToken = crypto.randomBytes(32).toString('hex')
+        const setupTokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7天有效
+
+        // 使用事务创建 User 和 Customer
+        const result = await prisma.$transaction(async (tx) => {
+            // 1. 创建用户（密码暂时为随机值，需要用户首次登录时设置）
+            const tempPassword = crypto.randomBytes(16).toString('hex')
+            const bcrypt = await import('bcryptjs')
+            const hashedPassword = await bcrypt.hash(tempPassword, 10)
+
+            const user = await tx.user.create({
+                data: {
+                    email: lead.email!,
+                    name: lead.contactName,
+                    passwordHash: hashedPassword,
+                    role: 'CUSTOMER',
+                    setupToken,
+                    setupTokenExpiry,
+                },
+            })
+
+            // 2. 创建客户记录
+            const customer = await tx.customer.create({
+                data: {
+                    leadId: lead.id,
+                    userId: user.id,
+                    companyName: lead.companyName,
+                    contactName: lead.contactName,
+                    email: lead.email,
+                    phone: lead.phone,
+                },
+            })
+
+            // 3. 更新线索状态为已转化
+            await tx.lead.update({
+                where: { id: leadId },
+                data: { status: 'CONVERTED' },
+            })
+
+            // 4. 记录活动
+            await tx.activity.create({
+                data: {
+                    actorId: operatorId,
+                    actionType: 'UPDATED',
+                    entityType: 'LEAD',
+                    entityId: lead.id,
+                    leadId: lead.id,
+                    description: `将线索 "${lead.contactName}" 转化为客户`,
+                },
+            })
+
+            return { user, customer, setupToken }
+        })
+
+        return {
+            success: true,
+            message: '线索已成功转化为客户',
+            customerId: result.customer.id,
+            userId: result.user.id,
+            setupToken: result.setupToken,
+            setupUrl: `/setup-password?token=${result.setupToken}`,
+        }
+    },
 }
 
 export default leadService

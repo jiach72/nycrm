@@ -2,7 +2,7 @@
   <div class="login-page">
     <div class="login-container">
       <div class="login-header">
-        <h1>通海CRM</h1>
+        <h1>通海南洋CRM</h1>
         <p>客户关系管理系统</p>
       </div>
 
@@ -51,9 +51,9 @@
         </el-form-item>
       </el-form>
 
-      <div class="login-footer">
+      <!-- <div class="login-footer">
         <p>测试账号：admin@tonghai.com / admin123</p>
-      </div>
+      </div> -->
     </div>
   </div>
 </template>

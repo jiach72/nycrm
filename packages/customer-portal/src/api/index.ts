@@ -28,6 +28,20 @@ export const authApi = {
     logout() {
         return apiClient.post('/auth/logout')
     },
+
+    /**
+     * 验证设置密码 Token
+     */
+    validateSetupToken(token: string) {
+        return apiClient.get(`/auth/setup-password/${token}`)
+    },
+
+    /**
+     * 首次登录设置密码
+     */
+    setupPassword(token: string, password: string) {
+        return apiClient.post('/auth/setup-password', { token, password })
+    },
 }
 
 export const projectApi = {
@@ -98,6 +112,97 @@ export const messageApi = {
      */
     getUnreadCount() {
         return apiClient.get('/messages/unread-count')
+    },
+}
+
+/**
+ * 客户门户专用 API（完全隔离）
+ */
+export const portalApi = {
+    /**
+     * 获取个人资料
+     */
+    getProfile() {
+        return apiClient.get('/portal/profile')
+    },
+
+    /**
+     * 更新个人资料
+     */
+    updateProfile(data: { name?: string; phone?: string; company?: string }) {
+        return apiClient.put('/portal/profile', data)
+    },
+
+    /**
+     * 修改密码
+     */
+    changePassword(data: { currentPassword: string; newPassword: string }) {
+        return apiClient.post('/portal/change-password', data)
+    },
+
+    /**
+     * 获取仪表板统计
+     */
+    getDashboardStats() {
+        return apiClient.get('/portal/dashboard')
+    },
+
+    /**
+     * 获取待办/通知列表
+     */
+    getNotifications() {
+        return apiClient.get('/portal/notifications')
+    },
+
+    /**
+     * 获取我的项目（通过 portal 路由）
+     */
+    getMyProjects() {
+        return apiClient.get('/portal/projects')
+    },
+
+    // ==================== 站内消息接口 ====================
+
+    /**
+     * 获取站内消息列表
+     */
+    getMessages(params?: { page?: number; limit?: number; isRead?: boolean; type?: string }) {
+        return apiClient.get('/portal/messages', { params })
+    },
+
+    /**
+     * 获取未读消息数量
+     */
+    getUnreadCount() {
+        return apiClient.get('/portal/messages/unread-count')
+    },
+
+    /**
+     * 获取消息详情
+     */
+    getMessageById(id: string) {
+        return apiClient.get(`/portal/messages/${id}`)
+    },
+
+    /**
+     * 标记消息为已读
+     */
+    markMessageAsRead(id: string) {
+        return apiClient.put(`/portal/messages/${id}/read`)
+    },
+
+    /**
+     * 全部标记为已读
+     */
+    markAllMessagesAsRead() {
+        return apiClient.post('/portal/messages/mark-all-read')
+    },
+
+    /**
+     * 删除消息
+     */
+    deleteMessage(id: string) {
+        return apiClient.delete(`/portal/messages/${id}`)
     },
 }
 

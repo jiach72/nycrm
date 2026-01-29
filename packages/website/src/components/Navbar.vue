@@ -79,10 +79,6 @@ const toggleMobileMenu = (): void => {
 const closeMobileMenu = (): void => {
   mobileMenuOpen.value = false
 }
-
-const handleContact = (): void => {
-  router.push('/contact')
-}
 </script>
 
 <style scoped>

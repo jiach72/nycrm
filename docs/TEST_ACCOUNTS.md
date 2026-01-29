@@ -1,13 +1,22 @@
-# 测试账号信息 (Test Accounts)
+# 测试账号说明
 
-以下账号仅供开发与测试环境使用，数据来源参考 `backend/prisma/seed.ts`。
+## CRM 管理端测试账号
 
-| 角色 | 邮箱 (账号) | 密码 | 权限说明 |
-|------|-----------|------|---------|
-| **系统管理员** | `admin@tonghai.com` | `admin123` | 拥有所有模块的访问权限 (Admin Access) |
-| **销售顾问** | `lisi@tonghai.com` | `sales123` | 负责线索跟进、任务处理 |
-| **销售顾问** | `wangwu@tonghai.com` | `sales123` | 负责线索跟进、任务处理 |
-| **交付经理** | `zhaoliu@tonghai.com` | `delivery123` | 负责项目交付、文档管理 |
-| **客户** | `client@example.com` | `customer123` | 访问客户门户 (Customer Portal) |
+| 角色 | 邮箱 | 密码 | 说明 |
+|------|------|------|------|
+| **系统管理员** | `admin@thny.sg` | `password123` | 拥有所有模块权限 (Admin) |
+| **项目经理/交付** | `zhaoliu@thny.sg` | `password123` | 负责项目跟进与文档处理 |
+| **销售顾问** | `lisi@thny.sg` | `password123` | 负责线索分配与转换 |
 
-> **提示**: 如果无法登录，请确认是否已执行数据库填充命令 `npm run db:seed`。
+## 客户门户测试账号
+
+| 邮箱 | 密码 | 说明 |
+|------|------|------|
+| `client@example.com` | `password123` | 陈大文 |
+| `liming@startup.io` | `password123` | 李明 |
+| `harvey@global.com` | `password123` | Harvey Tan |
+
+## 说明
+- 所有密码统一为 `password123`
+- CRM 管理端账号: 使用 `@thny.sg` 域名
+- 客户门户账号: 使用客户原有邮箱
